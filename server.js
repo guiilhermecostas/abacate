@@ -176,7 +176,7 @@ app.post('/pix', async (req, res) => {
         name: buyer?.name || "Anônimo",
         cellphone: buyer?.phone || "",
         email: buyer?.email || "",
-        taxId: buyer?.document || "000.000.000-00"
+        taxId: buyer?.document || "312.676.008-29"
       }
     };
 
