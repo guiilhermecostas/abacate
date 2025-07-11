@@ -162,14 +162,18 @@ async function enviarEventoUtmify(data, status) {
 
 const { v4: uuidv4 } = require('uuid');
 
-// Endpoint para gerar pagamento Pix
 app.post('/pix', async (req, res) => {
   console.log('📦 Body recebido do front:', req.body);
 
   try {
     const { external_id, payment_method, amount, buyer, tracking, fbc, fbp, user_agent } = req.body;
 
+    if (!amount || !buyer) {
+      return res.status(400).json({ error: 'amount e buyer são obrigatórios' });
+    }
+
     const payloadAbacate = {
+      external_id: external_id || `donation_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       amount, // em centavos
       expiresIn: 3600,
       description: "Está doação é apoiada pelo Banco Central do Brasil ❤️",
@@ -180,6 +184,8 @@ app.post('/pix', async (req, res) => {
         taxId: buyer?.document || "312.676.008-29"
       }
     };
+
+    console.log('🚀 Payload para AbacatePay:', payloadAbacate);
 
     const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
@@ -197,7 +203,10 @@ app.post('/pix', async (req, res) => {
       return res.status(response.status).json(data);
     }
 
-    // restante do código...
+    // Código para salvar tracking no Supabase e responder ao front
+
+    res.status(200).json({ ...data, external_id: payloadAbacate.external_id });
+
   } catch (err) {
     console.error('❌ Erro no fetch da AbacatePay:', err);
     res.status(500).json({ error: 'Erro ao conectar com a AbacatePay' });
