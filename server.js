@@ -79,7 +79,7 @@ async function enviarEventoFacebook(eventName, data) {
   };
 
   try {
-    const response = await fetch(url, { 
+    const response = await fetch(url, {
       method: 'POST',
       body: JSON.stringify(eventData),
       headers: { 'Content-Type': 'application/json' }
@@ -168,21 +168,25 @@ app.post('/pix', async (req, res) => {
   try {
     const { external_id, payment_method, amount, buyer, tracking, fbc, fbp, user_agent } = req.body;
 
-    const payloadRealTech = {
-      external_id,
-      payment_method,
-      amount,
-      buyer
+    const payloadAbacate = {
+      amount, // em centavos
+      expiresIn: 3600,
+      description: "Está doação é apoiada pelo Banco Central do Brasil ❤️",
+      customer: {
+        name: buyer?.name || "Anônimo",
+        cellphone: buyer?.phone || "",
+        email: buyer?.email || "",
+        taxId: buyer?.document || "000.000.000-00"
+      }
     };
 
-    const response = await fetch('https://api.realtechdev.com.br/v1/transactions', {
+    const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.REALTECH_API_KEY}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'Buckpay API'
+        Authorization: `Bearer ${process.env.ABACATEPAY_API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payloadRealTech)
+      body: JSON.stringify(payloadAbacate)
     });
 
     const data = await response.json();
@@ -198,7 +202,7 @@ app.post('/pix', async (req, res) => {
         src: trackingLimpo.src,
         sck: trackingLimpo.sck,
         utm_source: trackingLimpo.utm.source,
-        utm_campaign: trackingLimpo.utm.campaign, 
+        utm_campaign: trackingLimpo.utm.campaign,
         utm_term: trackingLimpo.utm.term,
         utm_content: trackingLimpo.utm.content,
         utm_id: trackingLimpo.utm.id,
@@ -208,18 +212,13 @@ app.post('/pix', async (req, res) => {
         fbp: fbp || null,
         fbc: fbc || null,
         user_agent: user_agent || null
-      };         
+      };
 
-      const { error: supabaseError, data: savedData } = await supabase
+      await supabase
         .from('trackings')
         .upsert(supabasePayload, { onConflict: 'external_id' });
-
-      if (supabaseError) {
-        console.error('❌ Erro ao salvar tracking no Supabase:', supabaseError);
-      } else {
-        console.log(`💾 Tracking salvo no Supabase para external_id ${external_id}`, savedData);
-      }
-    } else {
+    }
+    else {
       console.warn('⚠️ external_id ou transaction_id ausentes, tracking não salvo no Supabase');
     }
 
@@ -261,7 +260,7 @@ app.post('/webhook', async (req, res) => {
       .select('*')
       .eq('transaction_id', data.id)
       .single();
-  
+
     if (!errorById && trackingRowById) {
       trackingFromDb = trackingRowById.tracking;
       data.fbp = trackingRowById.fbp || null;
@@ -269,7 +268,7 @@ app.post('/webhook', async (req, res) => {
       data.user_agent = trackingRowById.user_agent || null;
       console.log('✅ Tracking encontrado via transaction_id:', trackingFromDb);
     }
-  }  
+  }
 
   // Limpa o tracking para garantir defaults
   const trackingSanitizado = limparTracking(trackingFromDb || {});
@@ -320,7 +319,7 @@ app.post('/webhook', async (req, res) => {
     );
     await enviarEventoUtmify(data, 'waiting_payment');
     await enviarEventoFacebook('InitiateCheckout', data);
-  } 
+  }
 
   if (event === 'transaction.processed' && data.status === 'paid') {
     await sendPushcutNotification(
