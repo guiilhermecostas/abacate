@@ -167,12 +167,8 @@ app.post('/pix', async (req, res) => {
   console.log('📦 Body recebido do front:', req.body);
 
   try {
-    // Gera external_id se não vier
-    const external_id = req.body.external_id || `donation_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const { external_id, payment_method, amount, buyer, tracking, fbc, fbp, user_agent } = req.body;
 
-    const { payment_method, amount, buyer, tracking, fbc, fbp } = req.body;
-
-    // Monta payload para AbacatePay
     const payloadAbacate = {
       amount, // em centavos
       expiresIn: 3600,
@@ -188,7 +184,7 @@ app.post('/pix', async (req, res) => {
     const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.ABACATEPAY_API_KEY}`,
+        Authorization: `Bearer ${process.env.ABACATEPAY_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payloadAbacate)
@@ -201,41 +197,13 @@ app.post('/pix', async (req, res) => {
       return res.status(response.status).json(data);
     }
 
-    if (external_id && data?.data?.id) {
-      const trackingLimpo = limparTracking(tracking || {});
-
-      const supabasePayload = {
-        external_id,
-        transaction_id: data.data.id,
-        ref: trackingLimpo.ref,
-        src: trackingLimpo.src,
-        sck: trackingLimpo.sck,
-        utm_source: trackingLimpo.utm.source,
-        utm_campaign: trackingLimpo.utm.campaign,
-        utm_term: trackingLimpo.utm.term,
-        utm_content: trackingLimpo.utm.content,
-        utm_id: trackingLimpo.utm.id,
-        buyer_name: buyer?.name || null,
-        buyer_email: buyer?.email || null,
-        tracking: trackingLimpo,
-        fbp: fbp || null,
-        fbc: fbc || null
-      };
-
-      await supabase
-        .from('trackings')
-        .upsert(supabasePayload, { onConflict: 'external_id' });
-    } else {
-      console.warn('⚠️ external_id ou transaction_id ausentes, tracking não salvo no Supabase');
-    }
-
-    // Retorna também o external_id para o frontend usar se quiser (ajuda rastreamento)
-    res.status(response.status).json({ ...data, external_id });
+    // restante do código...
   } catch (err) {
     console.error('❌ Erro no fetch da AbacatePay:', err);
     res.status(500).json({ error: 'Erro ao conectar com a AbacatePay' });
   }
 });
+
 
 // Webhook atualizado com busca pelo external_id ou transaction_id e limpeza do tracking
 app.post('/webhook', async (req, res) => {
