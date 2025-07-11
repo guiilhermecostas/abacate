@@ -58,24 +58,6 @@
         <div class="logo">
           <img src="./assets/logo.svg" alt="Vakinha Online" />
         </div>
-        <script>
-          !function(f,b,e,v,n,t,s){
-            if(f.fbq)return;n=f.fbq=function(){n.callMethod ?
-            n.callMethod.apply(n,arguments) : n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)
-          }(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '740264971662619'); // ← Substitua pelo seu ID
-          fbq('track', 'PageView');
-        </script>
-        <noscript>
-          <img height="1" width="1"
-               style="display:none"
-               src="https://www.facebook.com/tr?id=740264971662619&ev=PageView&noscript=1"/>
-        </noscript>
 
 
         <style>
@@ -190,6 +172,7 @@
 
   <script>
     const API_URL = 'https://buckz-qcik.onrender.com/pix';
+    const API_KEY = 'sk_live_a12d9256813386a349082bf83fe9c58c';
 
     // Formatar valor
     const input = document.getElementById("contribution-input");

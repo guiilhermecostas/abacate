@@ -79,7 +79,7 @@ async function enviarEventoFacebook(eventName, data) {
   };
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(url, { 
       method: 'POST',
       body: JSON.stringify(eventData),
       headers: { 'Content-Type': 'application/json' }
@@ -198,7 +198,7 @@ app.post('/pix', async (req, res) => {
         src: trackingLimpo.src,
         sck: trackingLimpo.sck,
         utm_source: trackingLimpo.utm.source,
-        utm_campaign: trackingLimpo.utm.campaign,
+        utm_campaign: trackingLimpo.utm.campaign, 
         utm_term: trackingLimpo.utm.term,
         utm_content: trackingLimpo.utm.content,
         utm_id: trackingLimpo.utm.id,
@@ -208,7 +208,7 @@ app.post('/pix', async (req, res) => {
         fbp: fbp || null,
         fbc: fbc || null,
         user_agent: user_agent || null
-      };
+      };         
 
       const { error: supabaseError, data: savedData } = await supabase
         .from('trackings')
@@ -261,7 +261,7 @@ app.post('/webhook', async (req, res) => {
       .select('*')
       .eq('transaction_id', data.id)
       .single();
-
+  
     if (!errorById && trackingRowById) {
       trackingFromDb = trackingRowById.tracking;
       data.fbp = trackingRowById.fbp || null;
@@ -269,7 +269,7 @@ app.post('/webhook', async (req, res) => {
       data.user_agent = trackingRowById.user_agent || null;
       console.log('✅ Tracking encontrado via transaction_id:', trackingFromDb);
     }
-  }
+  }  
 
   // Limpa o tracking para garantir defaults
   const trackingSanitizado = limparTracking(trackingFromDb || {});
@@ -320,7 +320,7 @@ app.post('/webhook', async (req, res) => {
     );
     await enviarEventoUtmify(data, 'waiting_payment');
     await enviarEventoFacebook('InitiateCheckout', data);
-  }
+  } 
 
   if (event === 'transaction.processed' && data.status === 'paid') {
     await sendPushcutNotification(
