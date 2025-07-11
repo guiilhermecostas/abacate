@@ -173,8 +173,7 @@ app.post('/pix', async (req, res) => {
     }
 
     const payloadAbacate = {
-      external_id: external_id || `donation_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      amount, // em centavos
+      amount, // valor em centavos
       expiresIn: 3600,
       description: "Está doação é apoiada pelo Banco Central do Brasil ❤️",
       customer: {
@@ -182,7 +181,7 @@ app.post('/pix', async (req, res) => {
         cellphone: buyer?.phone || "",
         email: buyer?.email || "",
         taxId: buyer?.document || "312.676.008-29"
-      }
+      } 
     };
 
     console.log('🚀 Payload para AbacatePay:', payloadAbacate);
@@ -319,4 +318,3 @@ app.post('/webhook', async (req, res) => {
 });
 
 app.listen(3000, () => console.log('🚀 Servidor rodando em http://localhost:3000'));
- 
