@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
+const cors = require('cors');
 
 const app = express();
 app.use(cors());
@@ -12,14 +12,16 @@ app.post('/api/gerar-pix', async (req, res) => {
 
   try {
     const response = await axios.post(
-      'https://api.abacatepay.com/billing/create',
+      'https://api.abacatepay.com/v1/pixQrCode/create',
       {
         amount: valor,
+        expiresIn: 3600, // expira em 1 hora
+        description: 'Ajude a Ana 🙏',
         customer: {
           name: nome,
-          email,
           cellphone: telefone,
-          taxId: '20873372760' // CPF opcional ou fictício para testes
+          email: email,
+          taxId: '00000000000' // ou CPF real
         }
       },
       {
@@ -30,19 +32,19 @@ app.post('/api/gerar-pix', async (req, res) => {
       }
     );
 
-    const { pix } = response.data;
+    const data = response.data.data;
 
     res.json({
-      qr_code_base64: pix.qr_code_base64,
-      pix_copia_cola: pix.qr_code
+      qr_code_base64: data.brCodeBase64,
+      pix_copia_cola: data.brCode
     });
 
-  } catch (error) {
-    console.error(error.response?.data || error.message);
+  } catch (err) {
+    console.error('Erro ao gerar Pix:', err.response?.data || err.message);
     res.status(500).json({ erro: 'Erro ao gerar Pix' });
   }
 });
 
 app.listen(3000, () => {
-  console.log('Servidor rodando em http://localhost:3000');
+  console.log('✅ Backend rodando em http://localhost:3000');
 });
