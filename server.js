@@ -23,7 +23,7 @@ async function enviarEventoUtmify(data, status) {
   const utm = data.tracking?.utm || {};
 
   const payload = {
-    orderId: data.txid,
+    orderId: '621272',
     platform: "checkoutfy",
     paymentMethod: "pix",
     status: status,
