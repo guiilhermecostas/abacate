@@ -14,25 +14,50 @@ app.get('/', (req, res) => {
   res.send('🚀 Backend AbacatePay está rodando!');
 });
 
-// Rota para criar pagamento (se necessário futuramente)
-app.post('/abacatepay', async (req, res) => {
+app.post("/criar-cobranca", async (req, res) => {
+  const { customer, amountCentavos } = req.body;
+
+  const payload = {
+    frequency: "ONE_TIME",
+    methods: ["PIX"],
+    products: [{
+      externalId: "doacao-ajude-ana",
+      name: "Doação Ajude Ana",
+      description: "Sua contribuição pode salvar uma vida.",
+      quantity: 1,
+      price: amountCentavos
+    }],
+    returnUrl: "https://example.com/voltar",
+    completionUrl: "https://example.com/sucesso",
+    customerId: "", // se não tiver um ID salvo, pode omitir
+    customer,
+    allowCoupons: false
+  };
+
   try {
-    const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
+    const response = await fetch('https://api.abacatepay.com/v1/billing/create', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.ABACATEPAY_TOKEN}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(payload)
     });
 
     const result = await response.json();
-    res.status(response.status).json(result);
+    console.log("✅ Resposta AbacatePay:", result);
+
+    if (result?.checkoutUrl) {
+      res.json({ checkoutUrl: result.checkoutUrl });
+    } else {
+      res.status(400).json({ error: "Erro ao gerar link", detalhes: result });
+    }
   } catch (err) {
-    console.error('Erro ao chamar AbacatePay:', err);
-    res.status(500).json({ error: 'Erro ao processar pagamento' });
+    console.error("❌ Erro:", err);
+    res.status(500).json({ error: "Erro interno ao criar cobrança" });
   }
 });
+
 
 // ✅ Rota para checar status do PIX
 app.get('/abacatepay/v1/pixQrCode/check', async (req, res) => {
