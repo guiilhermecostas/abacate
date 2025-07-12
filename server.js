@@ -1,89 +1,72 @@
+// backend/index.js
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const fetch = require('node-fetch');
-const dotenv = require('dotenv');
+const fetch = require('node-fetch'); // ou axios
+const bodyParser = require('body-parser');
 
-dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(bodyParser.json());
 
-app.use(cors());
-app.use(express.json());
+const ABACATEPAY_API_URL = 'https://api.abacatepay.com/v1/pixQrCode/create';
+const ABACATEPAY_API_KEY = process.env.ABACATEPAY_TOKEN; // sua chave secreta
 
-app.get('/', (req, res) => {
-  res.send('🚀 Backend AbacatePay está rodando!');
-});
-
-app.post("/criar-cobranca", async (req, res) => {
-  const { customer, amountCentavos } = req.body;
-
-  const payload = {
-    frequency: "ONE_TIME",
-    methods: ["PIX"],
-    products: [{
-      externalId: "doacao-ajude-ana",
-      name: "Doação Ajude Ana",
-      description: "Sua contribuição pode salvar uma vida.",
-      quantity: 1,
-      price: amountCentavos
-    }],
-    returnUrl: "https://example.com/voltar",
-    completionUrl: "https://example.com/sucesso",
-    customerId: "", // se não tiver um ID salvo, pode omitir
-    customer,
-    allowCoupons: false
-  };
-
+// Endpoint para criar cobrança Pix
+app.post('/criar-pix', async (req, res) => {
   try {
-    const response = await fetch('https://api.abacatepay.com/v1/billing/create', {
+    const { amount, customer } = req.body;
+
+    // Validar amount em centavos
+    if (!amount || amount < 2000 || amount > 120000) { // mínimo 20,00 e máximo 1200,00
+      return res.status(400).json({ error: 'Valor inválido. Deve estar entre 20,00 e 1.200,00 reais.' });
+    }
+
+    // Validar dados cliente (se informado)
+    if (customer) {
+      const { name, cellphone, email, taxId } = customer;
+      if (!name || !cellphone || !email || !taxId) {
+        return res.status(400).json({ error: 'Todos os campos do cliente são obrigatórios.' });
+      }
+    }
+
+    const payload = {
+      amount,
+      expiresIn: 3600,
+      description: "Ajude Ana - doação Pix 💚",
+      customer: customer || undefined
+    };
+
+    const response = await fetch(ABACATEPAY_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.ABACATEPAY_TOKEN}`,
+        'Authorization': `Bearer ${ABACATEPAY_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
-    console.log("✅ Resposta AbacatePay:", result);
+    const data = await response.json();
 
-    if (result?.checkoutUrl) {
-      res.json({ checkoutUrl: result.checkoutUrl });
-    } else {
-      res.status(400).json({ error: "Erro ao gerar link", detalhes: result });
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Erro ao criar Pix' });
     }
+
+    res.json(data);
   } catch (err) {
-    console.error("❌ Erro:", err);
-    res.status(500).json({ error: "Erro interno ao criar cobrança" });
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
+// Webhook para notificações (configurar URL no painel AbacatePay)
+app.post('/webhook', (req, res) => {
+  const event = req.body;
+  console.log('Webhook recebido:', event);
 
-// ✅ Rota para checar status do PIX
-app.get('/abacatepay/v1/pixQrCode/check', async (req, res) => {
-  const { id } = req.query;
+  // Aqui você pode atualizar seu banco, enviar email, etc.
+  // Exemplo: se event.status === 'PAID' -> marca doação como paga
 
-  if (!id) {
-    return res.status(400).json({ error: 'ID da transação não informado' });
-  }
-
-  try {
-    const response = await fetch(`https://api.abacatepay.com/v1/pixQrCode/check?id=${id}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${process.env.ABACATEPAY_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const result = await response.json();
-    res.status(response.status).json(result);
-  } catch (err) {
-    console.error('Erro ao checar status na AbacatePay:', err);
-    res.status(500).json({ error: 'Erro ao checar status do pagamento' });
-  }
+  res.status(200).send('ok');
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Backend rodando em http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Backend rodando na porta ${PORT}`));
