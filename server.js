@@ -13,9 +13,9 @@ const ABACATEPAY_TOKEN = process.env.ABACATEPAY_TOKEN;
 app.post('/create-pix', async (req, res) => {
   const { amount, description, customer } = req.body;
 
-  if (!amount || amount < 20) {
+  if (!amount || amount < 2000) {
     return res.status(400).json({ error: 'Valor mínimo de R$20,00 (2000 centavos)' });
-  }
+  }  
 
   try {
     const response = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
