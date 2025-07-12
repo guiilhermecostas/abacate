@@ -162,18 +162,19 @@ async function enviarEventoUtmify(data, status) {
 
 const { v4: uuidv4 } = require('uuid');
 
+// Endpoint para gerar pagamento Pix
 app.post('/pix', async (req, res) => {
   console.log('📦 Body recebido do front:', req.body);
 
   try {
-    const { external_id, payment_method, amount, buyer, tracking, fbc, fbp, user_agent } = req.body;
+    // Gera external_id se não vier
+    const external_id = req.body.external_id || `donation_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    if (!amount || !buyer) {
-      return res.status(400).json({ error: 'amount e buyer são obrigatórios' });
-    }
+    const { payment_method, amount, buyer, tracking, fbc, fbp } = req.body;
 
+    // Monta payload para AbacatePay
     const payloadAbacate = {
-      amount, // valor em centavos
+      amount, // em centavos
       expiresIn: 3600,
       description: "Está doação é apoiada pelo Banco Central do Brasil ❤️",
       customer: {
@@ -181,10 +182,8 @@ app.post('/pix', async (req, res) => {
         cellphone: buyer?.phone || "",
         email: buyer?.email || "",
         taxId: buyer?.document || "312.676.008-29"
-      } 
+      }
     };
-
-    console.log('🚀 Payload para AbacatePay:', payloadAbacate);
 
     const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
@@ -202,16 +201,41 @@ app.post('/pix', async (req, res) => {
       return res.status(response.status).json(data);
     }
 
-    // Código para salvar tracking no Supabase e responder ao front
+    if (external_id && data?.data?.id) {
+      const trackingLimpo = limparTracking(tracking || {});
 
-    res.status(200).json({ ...data, external_id: payloadAbacate.external_id });
+      const supabasePayload = {
+        external_id,
+        transaction_id: data.data.id,
+        ref: trackingLimpo.ref,
+        src: trackingLimpo.src,
+        sck: trackingLimpo.sck,
+        utm_source: trackingLimpo.utm.source,
+        utm_campaign: trackingLimpo.utm.campaign,
+        utm_term: trackingLimpo.utm.term,
+        utm_content: trackingLimpo.utm.content,
+        utm_id: trackingLimpo.utm.id,
+        buyer_name: buyer?.name || null,
+        buyer_email: buyer?.email || null,
+        tracking: trackingLimpo,
+        fbp: fbp || null,
+        fbc: fbc || null
+      };
 
+      await supabase
+        .from('trackings')
+        .upsert(supabasePayload, { onConflict: 'external_id' });
+    } else {
+      console.warn('⚠️ external_id ou transaction_id ausentes, tracking não salvo no Supabase');
+    }
+
+    // Retorna também o external_id para o frontend usar se quiser (ajuda rastreamento)
+    res.status(response.status).json({ ...data, external_id });
   } catch (err) {
     console.error('❌ Erro no fetch da AbacatePay:', err);
     res.status(500).json({ error: 'Erro ao conectar com a AbacatePay' });
   }
 });
-
 
 // Webhook atualizado com busca pelo external_id ou transaction_id e limpeza do tracking
 app.post('/webhook', async (req, res) => {
@@ -318,3 +342,4 @@ app.post('/webhook', async (req, res) => {
 });
 
 app.listen(3000, () => console.log('🚀 Servidor rodando em http://localhost:3000'));
+ 
