@@ -18,15 +18,16 @@ const ABACATEPAY_API_KEY = process.env.ABACATEPAY_TOKEN; // sua chave secreta
 
 // Endpoint para criar cobrança Pix
 app.post('/criar-pix', async (req, res) => {
-  try {
-    const { amount, customer } = req.body;
+  console.log('Recebido no backend:', req.body);
 
-    // Validar amount em centavos
-    if (!amount || amount < 2000 || amount > 120000) { // mínimo 20,00 e máximo 1200,00 reais
+  try {
+    const { amount, expiresIn, description, customer } = req.body;
+
+    // Validação simples:
+    if (!amount || amount < 2000 || amount > 120000) {
       return res.status(400).json({ error: 'Valor inválido. Deve estar entre 20,00 e 1.200,00 reais.' });
     }
 
-    // Validar dados cliente (se informado)
     if (customer) {
       const { name, cellphone, email, taxId } = customer;
       if (!name || !cellphone || !email || !taxId) {
@@ -34,31 +35,29 @@ app.post('/criar-pix', async (req, res) => {
       }
     }
 
-    const payload = {
-      amount,
-      expiresIn: 3600,
-      description: "Ajude Ana - doação Pix 💚",
-      customer: customer || undefined
-    };
+    const payload = { amount, expiresIn: expiresIn || 3600, description, customer: customer || undefined };
 
-    const response = await fetch(ABACATEPAY_API_URL, {
+    console.log('Payload para AbacatePay:', JSON.stringify(payload));
+
+    const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${ABACATEPAY_API_KEY}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${process.env.ABACATEPAY_TOKEN}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
+    console.log('Resposta AbacatePay:', data);
 
     if (!response.ok) {
       return res.status(response.status).json({ error: data.error?.message || 'Erro ao criar Pix' });
     }
 
-    res.json(data);
+    return res.json(data);
   } catch (err) {
-    console.error(err);
+    console.error('Erro no backend:', err);
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
