@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -9,120 +10,174 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const ABACATEPAY_TOKEN = process.env.ABACATEPAY_TOKEN;
+const UTMIFY_TOKEN = process.env.UTMIFY_API_KEY;
+const FB_PIXEL_ID = process.env.FB_PIXEL_ID;
+const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 
+// Utilitários
+const sanitizeNumber = str => str.replace(/\D/g, '');
+const hashSHA256 = str => crypto.createHash('sha256').update(str.trim().toLowerCase()).digest('hex');
+
+// Envia evento para UTMify
+async function enviarEventoUtmify(data, status) {
+  const utm = data.tracking?.utm || {};
+
+  const payload = {
+    orderId: data.txid,
+    platform: "checkoutfy",
+    paymentMethod: "pix",
+    status: status,
+    createdAt: new Date().toISOString(),
+    approvedDate: new Date().toISOString(),
+    customer: {
+      name: data.customer?.name || 'Sem nome',
+      email: data.customer?.email || 'sememail@email.com',
+      phone: data.customer?.cellphone || '',
+      document: data.customer?.taxId || ''
+    },
+    trackingParameters: {
+      utm_term: utm.utm_term || '',
+      utm_medium: utm.utm_medium || '',
+      utm_source: utm.utm_source || '',
+      utm_content: utm.utm_content || '',
+      utm_campaign: utm.utm_campaign || ''
+    },
+    commission: {
+      totalPriceInCents: data.amount || 0,
+      gatewayFeeInCents: 300,
+      userCommissionInCents: data.amount || 0
+    },
+    products: [
+      {
+        id: "produto1",
+        name: "Doação Checkout",
+        planId: "pix_plano",
+        planName: "Pix Único",
+        quantity: 1,
+        priceInCents: data.amount || 0
+      }
+    ]
+  };
+
+  try {
+    const res = await axios.post("https://api.utmify.com.br/api-credentials/orders", payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-token": UTMIFY_TOKEN
+      }
+    });
+    console.log("✅ UTMify enviado:", res.data);
+  } catch (err) {
+    console.error("❌ Erro ao enviar para UTMify:", err.response?.data || err.message);
+  }
+}
+
+// Envia evento Facebook CAPI
+async function enviarEventoFacebook(data) {
+  const utm = data.tracking?.utm || {};
+  const url = `https://graph.facebook.com/v17.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`;
+
+  const payload = {
+    data: [
+      {
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: data.txid,
+        action_source: 'website',
+        event_source_url: data.tracking?.src || 'https://seudominio.com',
+        user_data: {
+          em: hashSHA256(data.customer.email),
+          ph: hashSHA256(data.customer.cellphone),
+          fn: hashSHA256(data.customer.name.split(' ')[0] || ''),
+          ln: hashSHA256(data.customer.name.split(' ').slice(1).join(' ') || ''),
+          fbp: data.fbp || null,
+          fbc: data.fbc || null,
+          client_user_agent: data.user_agent || null,
+        },
+        custom_data: {
+          currency: 'BRL',
+          value: (data.amount || 0) / 100,
+          content_name: 'Doação',
+          content_category: utm.utm_campaign || 'ajudeana',
+          content_type: 'product',
+          order_id: data.txid
+        }
+      }
+    ]
+  };
+
+  try {
+    const res = await axios.post(url, payload);
+    console.log("✅ Facebook enviado:", res.data);
+  } catch (err) {
+    console.error("❌ Erro Facebook CAPI:", err.response?.data || err.message);
+  }
+}
+ 
+// Pushcut
+async function enviarPushcut() {
+  try {
+    const url = 'https://api.pushcut.io/U-9R4KGCR6y075x0NYKk7/notifications/Aprovado';
+    const res = await axios.post(url, { title: 'Aprovou', text: 'Venda!' });
+    console.log("✅ Pushcut enviado:", res.data);
+  } catch (err) {
+    console.error("❌ Erro Pushcut:", err.message);
+  }
+}
+
+// Rota principal
 app.post('/create-pix', async (req, res) => {
-  const {
-    amount,
-    description,
-    customer,
-    tracking,
-    fbp,
-    fbc,
-    user_agent
-  } = req.body;
+  const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
 
-  if (!amount || amount < 2000) {
-    return res.status(400).json({ error: 'Valor mínimo de R$20,00 (2000 centavos)' });
-  }
-  if (amount > 70000) {
-    return res.status(400).json({ error: 'Valor máximo de R$700,00 (70000 centavos)' });
-  }
-  if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId) {
+  if (!amount || amount < 2000 || amount > 70000)
+    return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$700,00)' });
+
+  if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId)
     return res.status(400).json({ error: 'Dados do cliente incompletos' });
-  }
-
-  const sanitizeNumber = (str) => str.replace(/\D/g, '');
 
   const sanitizedCustomer = {
     ...customer,
     cellphone: sanitizeNumber(customer.cellphone),
-    taxId: sanitizeNumber(customer.taxId),
+    taxId: sanitizeNumber(customer.taxId)
   };
 
   try {
-    const pixResponse = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
+    const response = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
       amount,
-      description: description || 'Doação Ajude Isa',
+      description: description || 'Doação Ajude Ana',
       customer: sanitizedCustomer,
       expiresIn: 3600
     }, {
       headers: {
         Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
+        'Content-Type': 'application/json'
       }
     });
 
-    const pixData = pixResponse.data.data;
+    const pixData = response.data?.data;
 
-    // Enviar payload para UTMify
-    const orderId = pixData.txid || crypto.randomUUID();
-    const payload = {
-      orderId,
-      platform: "checkoutfy",
-      paymentMethod: "pix",
-      status: "waiting_payment",
-      createdAt: new Date().toISOString(),
-      approvedDate: new Date().toISOString(),
-      customer: {
-        name: customer.name || "Doador anônimo",
-        email: customer.email || "anonimo@exemplo.com",
-        phone: customer.cellphone || "",
-        document: customer.taxId || ""
-      },
-      trackingParameters: {
-        utm_term: tracking?.utm?.term || '',
-        utm_medium: tracking?.utm?.medium || '',
-        utm_source: tracking?.utm?.source || '',
-        utm_content: tracking?.utm?.content || '',
-        utm_campaign: tracking?.utm?.campaign || ''
-      },
-      commission: {
-        totalPriceInCents: amount,
-        gatewayFeeInCents: 300,
-        userCommissionInCents: amount
-      },
-      products: [
-        {
-          id: "produto1",
-          name: "Doação Checkout",
-          planId: "pix_plano",
-          planName: "Pix Único",
-          quantity: 1,
-          priceInCents: amount
-        }
-      ]
+    if (!pixData || !pixData.txid) throw new Error('Pix não retornou txid');
+
+    const dadosEvento = {
+      txid: pixData.txid,
+      amount,
+      customer: sanitizedCustomer,
+      tracking: tracking || {},
+      fbp,
+      fbc,
+      user_agent
     };
 
-    // Envia para UTMify
-    axios.post("https://api.utmify.com.br/api-credentials/orders", payload, {
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-token": "a970kEmXX55G4T4Qe48hIv3liStmyR55x8l9"
-      }
-    }).then(() => {
-      console.log("✅ Payload enviado para UTMify");
-    }).catch((err) => {
-      console.error("❌ Erro ao enviar para UTMify:", err.message);
-    });
-
-    // Dispara o webhook do Pushcut
-    axios.post("https://api.pushcut.io/U-9R4KGCR6y075x0NYKk7/notifications/CheckoutFy%20Gerou", {
-      title: "Pagamento Gerado",
-      text: `Pix gerado com valor R$ ${(amount / 100).toFixed(2)}`
-    }).then(() => {
-      console.log("🚀 Webhook Pushcut disparado com sucesso");
-    }).catch((err) => {
-      console.error("❌ Erro ao disparar webhook Pushcut:", err.message);
-    });
+    // Disparar os eventos
+    await enviarEventoUtmify(dadosEvento, "paid");
+    await enviarEventoFacebook(dadosEvento);
+    await enviarPushcut();
 
     return res.json({ data: pixData });
   } catch (error) {
-    console.error('❌ Erro na AbacatePay:', error.response?.data || error.message);
+    console.error('❌ Erro ao gerar Pix:', error.response?.data || error.message);
     return res.status(500).json({ error: 'Erro ao gerar PIX' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Backend rodando na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
