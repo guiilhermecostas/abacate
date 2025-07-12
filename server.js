@@ -15,7 +15,7 @@ app.post('/create-pix', async (req, res) => {
 
   if (!amount || amount < 2000) {
     return res.status(400).json({ error: 'Valor mínimo de R$20,00 (2000 centavos)' });
-  }  
+  }
 
   try {
     const response = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
@@ -27,9 +27,11 @@ app.post('/create-pix', async (req, res) => {
       headers: {
         Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
         'Content-Type': 'application/json',
+        Accept: 'application/json'
       },
     });
 
+    // Retorna o objeto 'data' completo da API para o frontend
     return res.json({ data: response.data.data });
   } catch (error) {
     console.error('Erro na AbacatePay:', error.response?.data || error.message);
