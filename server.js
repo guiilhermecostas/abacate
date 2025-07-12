@@ -16,22 +16,35 @@ app.post('/create-pix', async (req, res) => {
   if (!amount || amount < 2000) {
     return res.status(400).json({ error: 'Valor mínimo de R$20,00 (2000 centavos)' });
   }
+  if (amount > 70000) {
+    return res.status(400).json({ error: 'Valor máximo de R$700,00 (70000 centavos)' });
+  }
+  if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId) {
+    return res.status(400).json({ error: 'Dados do cliente incompletos' });
+  }
+
+  const sanitizeNumber = (str) => str.replace(/\D/g, '');
+
+  const sanitizedCustomer = {
+    ...customer,
+    cellphone: sanitizeNumber(customer.cellphone),
+    taxId: sanitizeNumber(customer.taxId),
+  };
 
   try {
     const response = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
       amount,
       description: description || 'Doação Ajude Ana',
-      customer,
+      customer: sanitizedCustomer,
       expiresIn: 3600,
     }, {
       headers: {
         Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
         'Content-Type': 'application/json',
-        Accept: 'application/json'
+        Accept: 'application/json',
       },
     });
 
-    // Retorna o objeto 'data' completo da API para o frontend
     return res.json({ data: response.data.data });
   } catch (error) {
     console.error('Erro na AbacatePay:', error.response?.data || error.message);
