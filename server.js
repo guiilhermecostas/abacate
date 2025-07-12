@@ -113,7 +113,7 @@ async function enviarEventoFacebook(data) {
     console.error("❌ Erro Facebook CAPI:", err.response?.data || err.message);
   }
 }
- 
+
 // Pushcut
 async function enviarPushcut() {
   try {
