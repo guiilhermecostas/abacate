@@ -118,7 +118,7 @@ async function enviarEventoFacebook(data) {
 async function enviarPushcut() {
   try {
     const url = 'https://api.pushcut.io/U-9R4KGCR6y075x0NYKk7/notifications/Aprovado';
-    const res = await axios.post(url, { title: 'Pagamento Criado', text: 'Pix gerado com sucesso!' });
+    const res = await axios.post(url, { title: 'Aprovou', text: 'Venda!' });
     console.log("✅ Pushcut enviado:", res.data);
   } catch (err) {
     console.error("❌ Erro Pushcut:", err.message);
