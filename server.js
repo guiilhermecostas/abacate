@@ -149,9 +149,15 @@ app.post('/create-pix', async (req, res) => {
       }
     });
 
+    console.log("🟡 Resposta completa da AbacatePay:", response.data);
+
     const pixData = response.data?.data;
 
-    if (!pixData || !pixData.txid) throw new Error('Pix não retornou txid');
+    if (!pixData || !pixData.txid) {
+      console.error("❌ Dados incompletos da AbacatePay:", pixData);
+      throw new Error('Pix não retornou txid');
+    }
+
 
     const dadosEvento = {
       txid: pixData.txid,
