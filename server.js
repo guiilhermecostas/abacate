@@ -14,16 +14,14 @@ const UTMIFY_TOKEN = process.env.UTMIFY_API_KEY;
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 
-// Utilitários
 const sanitizeNumber = str => str.replace(/\D/g, '');
 const hashSHA256 = str => crypto.createHash('sha256').update(str.trim().toLowerCase()).digest('hex');
 
-// Envia evento para UTMify
 async function enviarEventoUtmify(data, status) {
   const utm = data.tracking?.utm || {};
 
   const payload = {
-    orderId: '621272',
+    orderId: data.txid,
     platform: "checkoutfy",
     paymentMethod: "pix",
     status: status,
@@ -72,7 +70,6 @@ async function enviarEventoUtmify(data, status) {
   }
 }
 
-// Envia evento Facebook CAPI
 async function enviarEventoFacebook(data) {
   const utm = data.tracking?.utm || {};
   const url = `https://graph.facebook.com/v17.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`;
@@ -114,7 +111,6 @@ async function enviarEventoFacebook(data) {
   }
 }
 
-// Pushcut
 async function enviarPushcut() {
   try {
     const url = 'https://api.pushcut.io/U-9R4KGCR6y075x0NYKk7/notifications/Aprovado';
@@ -125,7 +121,6 @@ async function enviarPushcut() {
   }
 }
 
-// Rota principal
 app.post('/create-pix', async (req, res) => {
   const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
 
@@ -168,14 +163,21 @@ app.post('/create-pix', async (req, res) => {
       user_agent
     };
 
-    // Disparar os eventos
-    await enviarEventoUtmify(dadosEvento, "paid");
+    await enviarEventoUtmify(dadosEvento, "waiting_payment");
     await enviarEventoFacebook(dadosEvento);
     await enviarPushcut();
 
     return res.json({ data: pixData });
   } catch (error) {
-    console.error('❌ Erro ao gerar Pix:', error.response?.data || error.message);
+    if (error.response) {
+      console.error("❌ Erro AbacatePay:", {
+        status: error.response.status,
+        data: error.response.data
+      });
+    } else {
+      console.error("❌ Erro desconhecido:", error.message);
+    }
+
     return res.status(500).json({ error: 'Erro ao gerar PIX' });
   }
 });
