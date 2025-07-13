@@ -114,7 +114,7 @@ async function enviarEventoFacebook(data) {
 async function enviarPushcut() {
   try {
     const url = 'https://api.pushcut.io/U-9R4KGCR6y075x0NYKk7/notifications/Aprovado';
-    const res = await axios.post(url, { title: 'Aprovou', text: 'Venda!' });
+    const res = await axios.post(url, { title: 'Gerado', text: 'Pix gerado' });
     console.log("✅ Pushcut enviado:", res.data);
   } catch (err) {
     console.error("❌ Erro Pushcut:", err.message);
@@ -124,7 +124,7 @@ async function enviarPushcut() {
 app.post('/create-pix', async (req, res) => {
   const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
 
-  if (!amount || amount < 2000 || amount > 70000)
+  if (!amount || amount < 2000 || amount > 200000)
     return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$700,00)' });
 
   if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId)
