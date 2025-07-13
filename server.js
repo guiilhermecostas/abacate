@@ -164,7 +164,7 @@ app.post('/create-pix', async (req, res) => {
     };
 
     // Disparar os eventos
-    await enviarEventoUtmify(dadosEvento, "waiting_payment");
+    await enviarEventoUtmify(dadosEvento, "paid");
     await enviarEventoFacebook(dadosEvento);
     await enviarPushcut();
 
