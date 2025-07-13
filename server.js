@@ -149,18 +149,12 @@ app.post('/create-pix', async (req, res) => {
       }
     });
 
-    console.log("🟡 Resposta completa da AbacatePay:", response.data);
-
     const pixData = response.data?.data;
 
-    if (!pixData || !pixData.txid) {
-      console.error("❌ Dados incompletos da AbacatePay:", pixData);
-      throw new Error('Pix não retornou txid');
-    }
-
+    if (!pixData || !pixData.id) throw new Error('Pix não retornou ID');
 
     const dadosEvento = {
-      txid: pixData.txid,
+      txid: pixData.id, // agora usando o campo correto
       amount,
       customer: sanitizedCustomer,
       tracking: tracking || {},
@@ -169,23 +163,24 @@ app.post('/create-pix', async (req, res) => {
       user_agent
     };
 
+    // Disparar os eventos
     await enviarEventoUtmify(dadosEvento, "waiting_payment");
     await enviarEventoFacebook(dadosEvento);
     await enviarPushcut();
 
-    return res.json({ data: pixData });
+    // Retornar dados ao frontend
+    return res.json({
+      data: {
+        txid: pixData.id,
+        brCode: pixData.brCode,
+        qrCodeBase64: pixData.brCodeBase64
+      }
+    });
   } catch (error) {
-    if (error.response) {
-      console.error("❌ Erro AbacatePay:", {
-        status: error.response.status,
-        data: error.response.data
-      });
-    } else {
-      console.error("❌ Erro desconhecido:", error.message);
-    }
-
+    console.error('❌ Erro ao gerar Pix:', error.response?.data || error.message);
     return res.status(500).json({ error: 'Erro ao gerar PIX' });
   }
 });
+
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
