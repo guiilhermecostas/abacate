@@ -196,7 +196,7 @@ app.post('/create-pix', async (req, res) => {
       tracking: tracking || {},
       fbp,
       fbc,
-      user_agent
+      user_agent 
     };
 
     await enviarEventoUtmify(dadosEvento, "waiting_payment");
@@ -219,12 +219,12 @@ app.post('/create-pix', async (req, res) => {
 
 app.post('/webhook', async (req, res) => {
   const { txid, status } = req.body;
-  if (!txid || status !== 'approved') return res.status(400).json({ error: 'Dados inválidos' });
+  if (!txid || status !== 'PAID') return res.status(400).json({ error: 'Dados inválidos' });
 
   const { data, error } = await supabase.from('vendas').select('*').eq('txid', txid).single();
   if (error || !data) return res.status(404).json({ error: 'Venda não encontrada' });
 
-  await supabase.from('vendas').update({ status: 'approved' }).eq('txid', txid);
+  await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
   await enviarEventoFacebook(data, "Purchase");
   await enviarEventoUtmify(data, "approved");
 
