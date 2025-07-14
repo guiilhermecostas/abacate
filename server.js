@@ -250,7 +250,6 @@ app.get('/check-status/:txid', async (req, res) => {
   }
 });
 
-
 app.post('/webhook', async (req, res) => {
   const { txid, status } = req.body;
   if (!txid || status !== 'PAID') return res.status(400).json({ error: 'Dados inválidos' });
@@ -264,5 +263,45 @@ app.post('/webhook', async (req, res) => {
 
   return res.status(200).json({ ok: true });
 });
+
+// Verifica status de pagamentos a cada 5 segundos
+setInterval(async () => {
+  try {
+    const { data: pendentes, error } = await supabase
+      .from('vendas')
+      .select('*')
+      .eq('status', 'waiting_payment');
+
+    if (error) {
+      console.error('❌ Erro ao buscar pendentes:', error.message);
+      return;
+    }
+
+    for (const venda of pendentes) {
+      try {
+        const response = await axios.get(`https://api.abacatepay.com/v1/pixQrCode/check?id=${venda.txid}`, {
+          headers: {
+            Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const status = response.data?.data?.status;
+
+        if (status === 'PAID') {
+          await supabase.from('vendas').update({ status: 'paid' }).eq('txid', venda.txid);
+          await enviarEventoFacebook(venda, "Purchase");
+          await enviarEventoUtmify(venda, "approved");
+          console.log(`✅ Pagamento confirmado automaticamente para: ${venda.txid}`);
+        }
+      } catch (err) {
+        console.error(`❌ Erro ao verificar status do Pix ${venda.txid}:`, err.response?.data || err.message);
+      }
+    }
+  } catch (err) {
+    console.error('❌ Erro geral no verificador automático:', err.message);
+  }
+}, 5000);
+
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
