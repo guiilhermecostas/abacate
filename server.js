@@ -73,14 +73,14 @@ async function enviarEventoUtmify(data, status) {
   }
 }
 
-async function enviarEventoFacebook(data) {
+async function enviarEventoFacebook(data, evento = 'InitiateCheckout') {
   const utm = data.tracking?.utm || {};
   const url = `https://graph.facebook.com/v17.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`;
 
   const payload = {
     data: [
       {
-        event_name: 'InitiateCheckout',
+        event_name: evento,
         event_time: Math.floor(Date.now() / 1000),
         event_id: data.txid,
         action_source: 'website',
@@ -108,9 +108,9 @@ async function enviarEventoFacebook(data) {
 
   try {
     const res = await axios.post(url, payload);
-    console.log("✅ Facebook enviado:", res.data);
+    console.log(`✅ Facebook (${evento}) enviado:`, res.data);
   } catch (err) {
-    console.error("❌ Erro Facebook CAPI:", err.response?.data || err.message);
+    console.error(`❌ Erro Facebook CAPI (${evento}):`, err.response?.data || err.message);
   }
 }
 
@@ -127,6 +127,12 @@ async function enviarPushcut() {
 async function salvarVendaNoSupabase(data, status) {
   const utm = data.tracking?.utm || {};
 
+  const existing = await supabase.from('vendas').select('txid').eq('txid', data.txid).single();
+  if (existing.data) {
+    console.log('🟡 Venda já registrada. Ignorando.');
+    return;
+  }
+
   const { error } = await supabase.from('vendas').insert([{
     txid: data.txid,
     amount: data.amount,
@@ -134,7 +140,7 @@ async function salvarVendaNoSupabase(data, status) {
     name: data.customer?.name || '',
     email: data.customer?.email || '',
     cellphone: data.customer?.cellphone || '',
-    taxId: data.customer?.taxId || '',
+    taxid: data.customer?.taxId || '',
     utm_source: utm.utm_source || '',
     utm_medium: utm.utm_medium || '',
     utm_campaign: utm.utm_campaign || '',
@@ -181,7 +187,6 @@ app.post('/create-pix', async (req, res) => {
     });
 
     const pixData = response.data?.data;
-
     if (!pixData || !pixData.id) throw new Error('Pix não retornou ID');
 
     const dadosEvento = {
@@ -195,7 +200,7 @@ app.post('/create-pix', async (req, res) => {
     };
 
     await enviarEventoUtmify(dadosEvento, "waiting_payment");
-    await enviarEventoFacebook(dadosEvento);
+    await enviarEventoFacebook(dadosEvento, "InitiateCheckout");
     await enviarPushcut();
     await salvarVendaNoSupabase(dadosEvento, "waiting_payment");
 
@@ -210,6 +215,20 @@ app.post('/create-pix', async (req, res) => {
     console.error('❌ Erro ao gerar Pix:', error.response?.data || error.message);
     return res.status(500).json({ error: 'Erro ao gerar PIX' });
   }
+});
+
+app.post('/webhook', async (req, res) => {
+  const { txid, status } = req.body;
+  if (!txid || status !== 'approved') return res.status(400).json({ error: 'Dados inválidos' });
+
+  const { data, error } = await supabase.from('vendas').select('*').eq('txid', txid).single();
+  if (error || !data) return res.status(404).json({ error: 'Venda não encontrada' });
+
+  await supabase.from('vendas').update({ status: 'approved' }).eq('txid', txid);
+  await enviarEventoFacebook(data, "Purchase");
+  await enviarEventoUtmify(data, "approved");
+
+  return res.status(200).json({ ok: true });
 });
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
