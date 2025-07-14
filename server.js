@@ -80,7 +80,7 @@ async function enviarEventoFacebook(data) {
   const payload = {
     data: [
       {
-        event_name: 'Purchase',
+        event_name: 'InitiateCheckout',
         event_time: Math.floor(Date.now() / 1000),
         event_id: data.txid,
         action_source: 'website',
