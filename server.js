@@ -237,7 +237,7 @@ app.get('/check-status/:txid', async (req, res) => {
 
       await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
       await enviarEventoFacebook(data, "Purchase");
-      await enviarEventoUtmify(data, "paid");
+      await enviarEventoUtmify(dadosEvento, "paid");
 
       return res.json({ status: 'paid', message: 'Pagamento confirmado' });
     }
@@ -259,7 +259,7 @@ app.post('/webhook', async (req, res) => {
 
   await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
   await enviarEventoFacebook(data, "Purchase");
-  await enviarEventoUtmify(data, "paid");
+  await enviarEventoUtmify(dadosEvento, "paid");
 
   return res.status(200).json({ ok: true });
 });
@@ -291,7 +291,7 @@ setInterval(async () => {
         if (status === 'PAID') {
           await supabase.from('vendas').update({ status: 'paid' }).eq('txid', venda.txid);
           await enviarEventoFacebook(venda, "Purchase");
-          await enviarEventoUtmify(venda, "paid");
+          await enviarEventoUtmify(dadosEvento, "paid");
           console.log(`✅ Pagamento confirmado automaticamente para: ${venda.txid}`);
         }
       } catch (err) {
