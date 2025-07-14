@@ -291,7 +291,7 @@ setInterval(async () => {
         if (status === 'PAID') {
           await supabase.from('vendas').update({ status: 'paid' }).eq('txid', venda.txid);
           await enviarEventoFacebook(venda, "Purchase");
-          await enviarEventoUtmify(venda, "approved");
+          await enviarEventoUtmify(venda, "paid");
           console.log(`✅ Pagamento confirmado automaticamente para: ${venda.txid}`);
         }
       } catch (err) {
