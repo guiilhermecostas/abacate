@@ -237,7 +237,7 @@ app.get('/check-status/:txid', async (req, res) => {
 
       await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
       await enviarEventoFacebook(data, "Purchase");
-      await enviarEventoUtmify(data, "approved");
+      await enviarEventoUtmify(data, "paid");
 
       return res.json({ status: 'paid', message: 'Pagamento confirmado' });
     }
@@ -259,7 +259,7 @@ app.post('/webhook', async (req, res) => {
 
   await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
   await enviarEventoFacebook(data, "Purchase");
-  await enviarEventoUtmify(data, "approved");
+  await enviarEventoUtmify(data, "paid");
 
   return res.status(200).json({ ok: true });
 });
