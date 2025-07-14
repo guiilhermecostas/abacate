@@ -217,6 +217,40 @@ app.post('/create-pix', async (req, res) => {
   }
 });
 
+app.get('/check-status/:txid', async (req, res) => {
+  const { txid } = req.params;
+
+  try {
+    const response = await axios.get(`https://api.abacatepay.com/v1/pixQrCode/check?id=${txid}`, {
+      headers: {
+        Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const status = response.data?.data?.status;
+
+    if (status === 'PAID') {
+      const { data, error } = await supabase.from('vendas').select('*').eq('txid', txid).single();
+
+      if (!data || error) return res.status(404).json({ error: 'Venda não encontrada' });
+
+      await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
+      await enviarEventoFacebook(data, "Purchase");
+      await enviarEventoUtmify(data, "approved");
+
+      return res.json({ status: 'paid', message: 'Pagamento confirmado' });
+    }
+
+    return res.json({ status, message: 'Pagamento ainda não confirmado' });
+
+  } catch (err) {
+    console.error("❌ Erro ao checar status:", err.response?.data || err.message);
+    return res.status(500).json({ error: 'Erro ao verificar status do Pix' });
+  }
+});
+
+
 app.post('/webhook', async (req, res) => {
   const { txid, status } = req.body;
   if (!txid || status !== 'PAID') return res.status(400).json({ error: 'Dados inválidos' });
