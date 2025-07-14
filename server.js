@@ -17,8 +17,11 @@ const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-const sanitizeNumber = str => str.replace(/\D/g, '');
-const hashSHA256 = str => crypto.createHash('sha256').update(str.trim().toLowerCase()).digest('hex');
+const sanitizeNumber = str => str ? str.replace(/\D/g, '') : '';
+const hashSHA256 = str => {
+  if (!str) return null;
+  return crypto.createHash('sha256').update(str.trim().toLowerCase()).digest('hex');
+};
 
 async function enviarEventoUtmify(data, status) {
   const utm = data.tracking?.utm || {};
@@ -77,6 +80,11 @@ async function enviarEventoFacebook(data, evento = 'InitiateCheckout') {
   const utm = data.tracking?.utm || {};
   const url = `https://graph.facebook.com/v17.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`;
 
+  const nomeCompleto = data.customer?.name || '';
+  const nomes = nomeCompleto.split(' ');
+  const primeiroNome = nomes[0] || '';
+  const sobrenome = nomes.slice(1).join(' ') || '';
+
   const payload = {
     data: [
       {
@@ -86,10 +94,10 @@ async function enviarEventoFacebook(data, evento = 'InitiateCheckout') {
         action_source: 'website',
         event_source_url: data.tracking?.src || 'https://seudominio.com',
         user_data: {
-          em: hashSHA256(data.customer.email),
-          ph: hashSHA256(data.customer.cellphone),
-          fn: hashSHA256(data.customer.name.split(' ')[0] || ''),
-          ln: hashSHA256(data.customer.name.split(' ').slice(1).join(' ') || ''),
+          em: hashSHA256(data.customer?.email),
+          ph: hashSHA256(data.customer?.cellphone),
+          fn: hashSHA256(primeiroNome),
+          ln: hashSHA256(sobrenome),
           fbp: data.fbp || null,
           fbc: data.fbc || null,
           client_user_agent: data.user_agent || null,
@@ -235,9 +243,12 @@ app.get('/check-status/:txid', async (req, res) => {
 
       if (!data || error) return res.status(404).json({ error: 'Venda não encontrada' });
 
+      // Atualiza o status no banco
       await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
+
+      // Envia eventos usando os dados atualizados da venda
       await enviarEventoFacebook(data, "Purchase");
-      await enviarEventoUtmify(dadosEvento, "paid");
+      await enviarEventoUtmify(data, "paid");
 
       return res.json({ status: 'paid', message: 'Pagamento confirmado' });
     }
@@ -259,7 +270,7 @@ app.post('/webhook', async (req, res) => {
 
   await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
   await enviarEventoFacebook(data, "Purchase");
-  await enviarEventoUtmify(dadosEvento, "paid");
+  await enviarEventoUtmify(data, "paid");
 
   return res.status(200).json({ ok: true });
 });
@@ -291,7 +302,7 @@ setInterval(async () => {
         if (status === 'PAID') {
           await supabase.from('vendas').update({ status: 'paid' }).eq('txid', venda.txid);
           await enviarEventoFacebook(venda, "Purchase");
-          await enviarEventoUtmify(dadosEvento, "paid");
+          await enviarEventoUtmify(venda, "paid");
           console.log(`✅ Pagamento confirmado automaticamente para: ${venda.txid}`);
         }
       } catch (err) {
