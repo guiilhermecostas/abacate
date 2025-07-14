@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors());
@@ -13,6 +14,8 @@ const ABACATEPAY_TOKEN = process.env.ABACATEPAY_TOKEN;
 const UTMIFY_TOKEN = process.env.UTMIFY_API_KEY;
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const sanitizeNumber = str => str.replace(/\D/g, '');
 const hashSHA256 = str => crypto.createHash('sha256').update(str.trim().toLowerCase()).digest('hex');
@@ -121,6 +124,34 @@ async function enviarPushcut() {
   }
 }
 
+async function salvarVendaNoSupabase(data, status) {
+  const utm = data.tracking?.utm || {};
+
+  const { error } = await supabase.from('vendas').insert([{
+    txid: data.txid,
+    amount: data.amount,
+    status: status,
+    name: data.customer?.name || '',
+    email: data.customer?.email || '',
+    cellphone: data.customer?.cellphone || '',
+    taxId: data.customer?.taxId || '',
+    utm_source: utm.utm_source || '',
+    utm_medium: utm.utm_medium || '',
+    utm_campaign: utm.utm_campaign || '',
+    utm_term: utm.utm_term || '',
+    utm_content: utm.utm_content || '',
+    fbp: data.fbp || '',
+    fbc: data.fbc || '',
+    user_agent: data.user_agent || ''
+  }]);
+
+  if (error) {
+    console.error("❌ Erro ao salvar no Supabase:", error.message);
+  } else {
+    console.log("✅ Venda salva no Supabase com sucesso.");
+  }
+}
+
 app.post('/create-pix', async (req, res) => {
   const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
 
@@ -154,7 +185,7 @@ app.post('/create-pix', async (req, res) => {
     if (!pixData || !pixData.id) throw new Error('Pix não retornou ID');
 
     const dadosEvento = {
-      txid: pixData.id, // agora usando o campo correto
+      txid: pixData.id,
       amount,
       customer: sanitizedCustomer,
       tracking: tracking || {},
@@ -163,12 +194,11 @@ app.post('/create-pix', async (req, res) => {
       user_agent
     };
 
-    // Disparar os eventos
-    await enviarEventoUtmify(dadosEvento, "paid");
+    await enviarEventoUtmify(dadosEvento, "waiting_payment");
     await enviarEventoFacebook(dadosEvento);
     await enviarPushcut();
+    await salvarVendaNoSupabase(dadosEvento, "waiting_payment");
 
-    // Retornar dados ao frontend
     return res.json({
       data: {
         txid: pixData.id,
@@ -181,6 +211,5 @@ app.post('/create-pix', async (req, res) => {
     return res.status(500).json({ error: 'Erro ao gerar PIX' });
   }
 });
-
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
