@@ -429,7 +429,42 @@ app.get('/api/tax-info', async (req, res) => {
   return res.json({ percenttax: user.percenttax, fixtax: user.fixtax });
 });
 
+app.get('/api/vendas-pagas', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key não fornecida' });
+  }
 
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('*')
+    .eq('status', 'paid')
+    .eq('api_key', apiKey); // Filtra pela API KEY do usuário
 
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.json({ quantidade: data.length, vendas: data });
+});
+
+app.get('/api/vendas-pendentes', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key não fornecida' });
+  }
+
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('*')
+    .eq('status', 'waiting_payment')
+    .eq('api_key', apiKey);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.json({ quantidade: data.length, vendas: data });
+});
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
