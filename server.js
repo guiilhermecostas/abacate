@@ -440,42 +440,43 @@ app.get('/api/resumo-vendas', async (req, res) => {
   const { data_de, data_ate } = req.query;
 
   if (!apiKey) {
-    return res.status(400).json({ error: 'API key não enviada' });
+    return res.status(401).json({ error: 'API Key não fornecida' });
   }
 
-  let query = supabase.from('vendas').select('*').eq('api_key', apiKey);
+  let query = supabase
+    .from('vendas')
+    .select('status, total', { count: 'exact' })
+    .eq('api_key', apiKey);
 
   if (data_de) {
-    query = query.gte('created_at', new Date(data_de).toISOString());
+    query = query.gte('created_at', `${data_de}T00:00:00`);
   }
 
   if (data_ate) {
-    const dataAteFull = new Date(data_ate);
-    dataAteFull.setHours(23, 59, 59, 999);
-    query = query.lte('created_at', dataAteFull.toISOString());
+    query = query.lte('created_at', `${data_ate}T23:59:59`);
   }
 
-  try {
-    const { data: vendasPagas } = await query.eq('status', 'paid');
-    const { data: vendasPendentes } = await query.eq('status', 'waiting_payment');
+  const { data, error } = await query;
 
-    const totalPagas = vendasPagas.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
-    const totalPendentes = vendasPendentes.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
-
-    res.json({
-      vendasPagas: {
-        quantidade: vendasPagas.length,
-        total: totalPagas,
-      },
-      vendasPendentes: {
-        quantidade: vendasPendentes.length,
-        total: totalPendentes,
-      }
-    });
-  } catch (error) {
-    console.error('Erro no resumo de vendas:', error);
-    res.status(500).json({ error: 'Erro interno' });
+  if (error) {
+    console.error('Erro no Supabase:', error);
+    return res.status(500).json({ error: 'Erro ao consultar vendas' });
   }
+
+  let vendasPagas = { quantidade: 0, total: 0 };
+  let vendasPendentes = { quantidade: 0, total: 0 };
+
+  for (const venda of data) {
+    if (venda.status === 'paga') {
+      vendasPagas.quantidade++;
+      vendasPagas.total += venda.total;
+    } else if (venda.status === 'pendente') {
+      vendasPendentes.quantidade++;
+      vendasPendentes.total += venda.total;
+    }
+  }
+
+  return res.json({ vendasPagas, vendasPendentes });
 });
 
 
