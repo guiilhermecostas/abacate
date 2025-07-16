@@ -183,7 +183,7 @@ function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // dados do usuário no req.user
+    req.user = decoded; 
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido ou expirado' });
@@ -267,10 +267,8 @@ app.get('/check-status/:txid', async (req, res) => {
 
       if (!data || error) return res.status(404).json({ error: 'Venda não encontrada' });
 
-      // Atualiza o status no banco
       await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
 
-      // Envia eventos usando os dados atualizados da venda
       await enviarEventoFacebook(data, "Purchase");
       await enviarEventoUtmify(data, "paid");
 
@@ -299,7 +297,6 @@ app.post('/webhook', async (req, res) => {
   return res.status(200).json({ ok: true });
 });
 
-// Verifica status de pagamentos a cada 5 segundos
 setInterval(async () => {
   try {
     const { data: pendentes, error } = await supabase
@@ -341,7 +338,6 @@ setInterval(async () => {
 app.post('/api/cadastro', async (req, res) => {
   const { nome, email, senha, cpf } = req.body;
 
-  // verifica se usuário já existe
   const { data: existingUser } = await supabase
     .from('usuarios')
     .select('id')
@@ -352,12 +348,10 @@ app.post('/api/cadastro', async (req, res) => {
     return res.status(400).json({ error: 'Usuário já cadastrado' });
   }
 
-  const senhaHash = await bcrypt.hash(senha, 10);
-
   const { error } = await supabase.from('usuarios').insert({
     nome,
     email,
-    senha: senhaHash,
+    senha, 
     cpf,
     api_key: 'api_' + Math.random().toString(36).substring(2, 15),
     pin_key_int: Math.floor(1000 + Math.random() * 9000)
@@ -381,7 +375,6 @@ app.post('/api/login', async (req, res) => {
 
   if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-  // Comparação direta (sem hash)
   if (senha !== user.senha) return res.status(401).json({ error: 'Senha incorreta' });
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
