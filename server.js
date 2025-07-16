@@ -429,36 +429,35 @@ app.get('/api/tax-info', async (req, res) => {
   return res.json({ percenttax: user.percenttax, fixtax: user.fixtax });
 });
 
-app.get('/api/vendas-aprovadas', async (req, res) => {
+app.get('/api/resumo-vendas', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data: vendasPagas } = await supabase
       .from('vendas')
-      .select('*')
+      .select('valor_liquido')
       .eq('status', 'paid');
 
-    if (error) return res.status(500).json({ error: error.message });
-
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro interno no servidor' });
-  }
-});
-
-app.get('/api/vendas-pendentes', async (req, res) => {
-  try {
-    const { data, error } = await supabase
+    const { data: vendasPendentes } = await supabase
       .from('vendas')
-      .select('*')
-      .eq('status', 'waiting_payment'); 
-      
-    if (error) return res.status(500).json({ error: error.message });
+      .select('valor_liquido')
+      .eq('status', 'waiting_payment');
 
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro interno no servidor' });
+    const totalPagas = vendasPagas.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
+    const totalPendentes = vendasPendentes.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
+
+    res.json({
+      vendasPagas: {
+        quantidade: vendasPagas.length,
+        total: totalPagas,
+      },
+      vendasPendentes: {
+        quantidade: vendasPendentes.length,
+        total: totalPendentes,
+      }
+    });
+  } catch (error) {
+    console.error('Erro no resumo de vendas:', error);
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
-
-
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
