@@ -149,10 +149,11 @@ async function salvarVendaNoSupabase(data, status) {
     return;
   }
 
-  const { error } = await supabase.from('vendas').insert([{
+  await supabase.from('vendas').insert([{
     txid: data.txid,
     amount: data.amount,
     status: status,
+    api_key: data.api_key || '',
     name: data.customer?.name || '',
     email: data.customer?.email || '',
     cellphone: data.customer?.cellphone || '',
@@ -166,6 +167,7 @@ async function salvarVendaNoSupabase(data, status) {
     fbc: data.fbc || '',
     user_agent: data.user_agent || ''
   }]);
+
 
   if (error) {
     console.error("❌ Erro ao salvar no Supabase:", error.message);
@@ -183,7 +185,7 @@ function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; 
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido ou expirado' });
@@ -197,7 +199,7 @@ app.post('/create-pix', async (req, res) => {
     return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$700,00)' });
 
   if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId)
-    return res.status(400).json({ error: 'Dados do cliente incompletos' }); 
+    return res.status(400).json({ error: 'Dados do cliente incompletos' });
 
   const sanitizedCustomer = {
     ...customer,
@@ -221,15 +223,19 @@ app.post('/create-pix', async (req, res) => {
     const pixData = response.data?.data;
     if (!pixData || !pixData.id) throw new Error('Pix não retornou ID');
 
+    const apiKey = req.headers['x-api-key'];
+
     const dadosEvento = {
       txid: pixData.id,
       amount,
-      customer: sanitizedCustomer,
+      customer: sanitizedCustomer, 
       tracking: tracking || {},
       fbp,
       fbc,
-      user_agent
+      user_agent,
+      api_key: apiKey
     };
+
 
     await enviarEventoUtmify(dadosEvento, "waiting_payment");
     await enviarEventoFacebook(dadosEvento, "InitiateCheckout");
@@ -350,8 +356,8 @@ app.post('/api/cadastro', async (req, res) => {
 
   const { error } = await supabase.from('usuarios').insert({
     nome,
-    email, 
-    senha, 
+    email,
+    senha,
     cpf,
     api_key: 'overpay_key_' + Math.random().toString(36).substring(2, 15),
     pin_key_int: Math.floor(1000 + Math.random() * 9000)
@@ -471,5 +477,31 @@ app.get('/api/resumo-vendas', async (req, res) => {
     res.status(500).json({ error: 'Erro interno ao gerar resumo de vendas' });
   }
 });
+
+app.get('/api/visitas', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key não enviada' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('visitas')
+      .select('*', { count: 'exact' })
+      .eq('api_key', apiKey);
+
+    if (error) {
+      console.error('Erro ao buscar visitas:', error.message);
+      return res.status(500).json({ error: 'Erro ao buscar visitas' });
+    }
+
+    return res.json({ totalVisitas: data.length }); 
+  } catch (err) {
+    console.error('Erro inesperado ao buscar visitas:', err.message);
+    return res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
