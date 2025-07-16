@@ -437,15 +437,18 @@ app.get('/api/vendas-pagas', async (req, res) => {
 
   const { data, error } = await supabase
     .from('vendas')
-    .select('*')
+    .select('valor_liquido')
     .eq('status', 'paid')
-    .eq('api_key', apiKey); // Filtra pela API KEY do usuário
+    .eq('api_key', apiKey);
 
   if (error) {
     return res.status(500).json({ error: error.message });
   }
 
-  return res.json({ quantidade: data.length, vendas: data });
+  const quantidade = data.length;
+  const total = data.reduce((acc, venda) => acc + (venda.valor_liquido || 0), 0);
+
+  return res.json({ quantidade, total });
 });
 
 app.get('/api/vendas-pendentes', async (req, res) => {
@@ -456,7 +459,7 @@ app.get('/api/vendas-pendentes', async (req, res) => {
 
   const { data, error } = await supabase
     .from('vendas')
-    .select('*')
+    .select('valor_liquido')
     .eq('status', 'waiting_payment')
     .eq('api_key', apiKey);
 
@@ -464,7 +467,11 @@ app.get('/api/vendas-pendentes', async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 
-  return res.json({ quantidade: data.length, vendas: data });
+  const quantidade = data.length;
+  const total = data.reduce((acc, venda) => acc + (venda.valor_liquido || 0), 0);
+
+  return res.json({ quantidade, total });
 });
+
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
