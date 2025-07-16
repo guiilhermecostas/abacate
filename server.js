@@ -430,16 +430,28 @@ app.get('/api/tax-info', async (req, res) => {
 });
 
 app.get('/api/resumo-vendas', async (req, res) => {
-  try {
-    const { data: vendasPagas } = await supabase
-      .from('vendas')
-      .select('valor_liquido')
-      .eq('status', 'paid');
+  const apiKey = req.headers['x-api-key'];
 
-    const { data: vendasPendentes } = await supabase
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key não enviada' });
+  }
+
+  try {
+    const { data: vendasPagas, error: errorPagas } = await supabase
       .from('vendas')
       .select('valor_liquido')
-      .eq('status', 'waiting_payment');
+      .eq('status', 'paid')
+      .eq('api_key', apiKey);
+
+    const { data: vendasPendentes, error: errorPendentes } = await supabase
+      .from('vendas')
+      .select('valor_liquido')
+      .eq('status', 'waiting_payment')
+      .eq('api_key', apiKey);
+
+    if (errorPagas || errorPendentes) {
+      throw new Error(errorPagas?.message || errorPendentes?.message);
+    }
 
     const totalPagas = vendasPagas.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
     const totalPendentes = vendasPendentes.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
@@ -456,7 +468,7 @@ app.get('/api/resumo-vendas', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no resumo de vendas:', error);
-    res.status(500).json({ error: 'Erro interno' });
+    res.status(500).json({ error: 'Erro interno ao gerar resumo de vendas' });
   }
 });
 
