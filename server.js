@@ -549,6 +549,26 @@ app.get('/api/visitas-vivo', async (req, res) => {
   }
 });
 
+app.post('/api/iniciais', async (req, res) => {
+  const { api_key } = req.body;
+
+  if (!api_key) return res.status(400).json({ error: 'api_key é obrigatória' });
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('nome')
+    .eq('api_key', api_key)
+    .single();
+
+  if (error || !data) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+  const partes = data.nome.trim().split(' ');
+  const iniciais = (partes[0]?.[0] || '') + (partes[1]?.[0] || '');
+
+  return res.json({ iniciais: iniciais.toUpperCase() });
+});
+
+
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
