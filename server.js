@@ -429,49 +429,36 @@ app.get('/api/tax-info', async (req, res) => {
   return res.json({ percenttax: user.percenttax, fixtax: user.fixtax });
 });
 
-app.get('/api/vendas-pagas', async (req, res) => {
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey) {
-    return res.status(400).json({ error: 'API key não fornecida' });
+app.get('/api/vendas-aprovadas', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('*')
+      .eq('status', 'paid');
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
-
-  const { data, error } = await supabase
-    .from('vendas')
-    .select('valor_liquido')
-    .eq('status', 'paid')
-    .eq('api_key', apiKey);
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-
-  const quantidade = data.length;
-  const total = data.reduce((acc, venda) => acc + (venda.valor_liquido || 0), 0);
-
-  return res.json({ quantidade, total });
 });
 
 app.get('/api/vendas-pendentes', async (req, res) => {
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey) {
-    return res.status(400).json({ error: 'API key não fornecida' });
+  try {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('*')
+      .eq('status', 'waiting_payment'); 
+      
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
-
-  const { data, error } = await supabase
-    .from('vendas')
-    .select('valor_liquido')
-    .eq('status', 'waiting_payment')
-    .eq('api_key', apiKey);
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-
-  const quantidade = data.length;
-  const total = data.reduce((acc, venda) => acc + (venda.valor_liquido || 0), 0);
-
-  return res.json({ quantidade, total });
 });
+
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
