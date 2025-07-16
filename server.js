@@ -568,42 +568,39 @@ app.post('/api/iniciais', async (req, res) => {
   return res.json({ iniciais: iniciais.toUpperCase() });
 });
 
-app.get('/api/vendas', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('vendas') // nome real da tabela
-      .select('valor_liquido, status, name, email, created_at');
-
-    if (error) {
-      return res.status(500).json({ error: 'Erro ao buscar vendas' });
-    }
-
-    const vendas = data.map((item) => ({
-      valor: item.valor_liquido,
-      status: item.status,
-      nome: item.name,
-      email: item.email,
-      horario: new Date(item.created_at).toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }));
-
-    return res.json({ vendas });
-  } catch (err) {
-    return res.status(500).json({ error: 'Erro interno no servidor' });
-  }
-});
-
 function formatarStatus(status) {
   if (status === 'paid') return 'Aprovado';
   if (status === 'waiting_payment') return 'Pendente';
   if (status === 'refunded') return 'Reembolsado';
   return status;
 }
+
+app.get('/api/vendas', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('valor_liquido, status, name, email, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar vendas:', error);
+      return res.status(500).json({ error: 'Erro ao buscar vendas.' });
+    }
+
+    const vendas = data.map((venda) => ({
+      valor: venda.valor_liquido,
+      status: formatarStatus(venda.status),
+      nome: venda.name,
+      email: venda.email,
+      horario: venda.created_at
+    }));
+
+    res.json({ vendas });
+  } catch (err) {
+    console.error('Erro interno:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
 
 
 
