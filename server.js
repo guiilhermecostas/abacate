@@ -445,7 +445,7 @@ app.get('/api/resumo-vendas', async (req, res) => {
 
   let query = supabase
     .from('vendas')
-    .select('status, total', { count: 'exact' })
+    .select('status, amount', { count: 'exact' })
     .eq('api_key', apiKey);
 
   if (data_de) {
@@ -469,7 +469,7 @@ app.get('/api/resumo-vendas', async (req, res) => {
   for (const venda of data) {
     if (venda.status === 'paid') {
       vendasPagas.quantidade++;
-      vendasPagas.total += venda.total;
+      vendasPagas.total += venda.total; 
     } else if (venda.status === 'waiting_payment') {
       vendasPendentes.quantidade++;
       vendasPendentes.total += venda.total;
