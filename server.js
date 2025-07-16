@@ -568,6 +568,41 @@ app.post('/api/iniciais', async (req, res) => {
   return res.json({ iniciais: iniciais.toUpperCase() });
 });
 
+app.get('/api/vendas', authMiddleware, async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey) {
+    return res.status(401).json({ error: 'API Key não fornecida' });
+  }
+
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('amount, created_at, name, email, status')
+    .eq('api_key', apiKey)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('❌ Erro ao buscar vendas:', error.message);
+    return res.status(500).json({ error: 'Erro ao buscar vendas' });
+  }
+
+  const vendas = data.map(venda => ({
+    valor: `R$ ${(venda.amount / 100).toFixed(2).replace('.', ',')}`,
+    horario: new Date(venda.created_at).toLocaleString('pt-BR'),
+    nome: venda.name,
+    email: venda.email,
+    status: formatarStatus(venda.status)
+  }));
+
+  return res.json({ vendas });
+});
+
+function formatarStatus(status) {
+  if (status === 'paid') return 'Aprovado';
+  if (status === 'waiting_payment') return 'Pendente';
+  if (status === 'refunded') return 'Reembolsado';
+  return status;
+}
 
 
 
