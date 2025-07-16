@@ -210,7 +210,7 @@ app.post('/create-pix', async (req, res) => {
   try {
     const response = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
       amount,
-      description: description || 'Doação Ajude Ana',
+      description: description || 'Este pagamento tem o selo de segurança do Banco Central do Brasil.',
       customer: sanitizedCustomer,
       expiresIn: 3600
     }, {
@@ -445,7 +445,7 @@ app.get('/api/resumo-vendas', async (req, res) => {
 
   let query = supabase
     .from('vendas')
-    .select('status, amount', { count: 'exact' })
+    .select('status, valor_liquido', { count: 'exact' })
     .eq('api_key', apiKey);
 
   if (data_de) {
@@ -469,10 +469,10 @@ app.get('/api/resumo-vendas', async (req, res) => {
   for (const venda of data) {
     if (venda.status === 'paid') {
       vendasPagas.quantidade++;
-      vendasPagas.total += venda.amount;
+      vendasPagas.total += venda.valor_liquido;
     } else if (venda.status === 'waiting_payment') {
       vendasPendentes.quantidade++;
-      vendasPendentes.total += venda.amount;
+      vendasPendentes.total += venda.valor_liquido;
     }
   }
   
