@@ -483,28 +483,40 @@ app.get('/api/resumo-vendas', async (req, res) => {
 
 app.get('/api/visitas', async (req, res) => {
   const apiKey = req.headers['x-api-key'];
+  const { data_de, data_ate } = req.query;
 
   if (!apiKey) {
     return res.status(400).json({ error: 'API key não enviada' });
   }
 
+  let query = supabase
+    .from('visitas')
+    .select('*', { count: 'exact' })
+    .eq('api_key', apiKey);
+
+  if (data_de) {
+    query = query.gte('created_at', `${data_de}T00:00:00`);
+  }
+
+  if (data_ate) {
+    query = query.lte('created_at', `${data_ate}T23:59:59`);
+  }
+
   try {
-    const { data, error } = await supabase
-      .from('visitas')
-      .select('*', { count: 'exact' })
-      .eq('api_key', apiKey);
+    const { data, error } = await query;
 
     if (error) {
       console.error('Erro ao buscar visitas:', error.message);
       return res.status(500).json({ error: 'Erro ao buscar visitas' });
     }
 
-    return res.json({ totalVisitas: data.length }); 
+    return res.json({ totalVisitas: data.length });
   } catch (err) {
     console.error('Erro inesperado ao buscar visitas:', err.message);
     return res.status(500).json({ error: 'Erro interno' });
   }
 });
+
 app.get('/api/visitas-vivo', async (req, res) => {
   const apiKey = req.headers['x-api-key'];
 
