@@ -577,10 +577,16 @@ function formatarStatus(status) {
 
 app.get('/api/vendas', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = 10;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
       .from('vendas')
-      .select('valor_liquido, status, name, email, created_at')
-      .order('created_at', { ascending: false });
+      .select('valor_liquido, status, name, email, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Erro ao buscar vendas:', error);
@@ -592,13 +598,18 @@ app.get('/api/vendas', async (req, res) => {
       status: formatarStatus(venda.status),
       nome: venda.name,
       email: venda.email,
-      horario: venda.created_at
+      horario: venda.created_at,
     }));
 
-    res.json({ vendas });
+    return res.json({
+      vendas,
+      total: count,
+      page,
+      totalPages: Math.ceil(count / pageSize),
+    });
   } catch (err) {
     console.error('Erro interno:', err);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
 
