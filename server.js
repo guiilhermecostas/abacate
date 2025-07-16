@@ -502,6 +502,38 @@ app.get('/api/visitas', async (req, res) => {
     return res.status(500).json({ error: 'Erro interno' });
   }
 });
+app.get('/api/visitas-vivo', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key não enviada' });
+  }
+
+  try {
+    const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('visitas')
+      .select('*')
+      .eq('api_key', apiKey)
+      .gte('created_at', cincoMinutosAtras)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar visitas:', error);
+      return res.status(500).json({ error: 'Erro interno' });
+    }
+
+    return res.json({
+      quantidade: data.length,
+      visitas: data
+    });
+  } catch (err) {
+    console.error('Erro inesperado:', err);
+    return res.status(500).json({ error: 'Erro interno inesperado' });
+  }
+});
+
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
