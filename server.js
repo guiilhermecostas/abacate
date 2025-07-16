@@ -190,7 +190,7 @@ function authMiddleware(req, res, next) {
   }
 }
 
-app.post('/create-pix', authMiddleware, async (req, res) => {
+app.post('/create-pix', async (req, res) => {
   const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
 
   if (!amount || amount < 2000 || amount > 200000)
@@ -375,7 +375,7 @@ app.post('/api/login', async (req, res) => {
 
   if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-  if (senha !== user.senha) return res.status(401).json({ error: 'Senha incorreta' });
+  if (senha !== user.senha) return res.status(401).json({ error: 'Credenciais inválidas' });
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
     expiresIn: '1d'
@@ -389,6 +389,25 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
+app.get('/api/validate-key', async (req, res) => {
+  const apiKey = req.headers['x-api-key'] || req.query.api_key;
+
+  if (!apiKey) {
+    return res.status(400).json({ valid: false, message: 'Api key não enviada' });
+  }
+
+  const { data: user, error } = await supabase
+    .from('usuarios')
+    .select('id')
+    .eq('api_key', apiKey)
+    .single();
+
+  if (error || !user) {
+    return res.status(401).json({ valid: false, message: 'Api key inválida' });
+  }
+
+  return res.json({ valid: true });
+});
 
 
 
