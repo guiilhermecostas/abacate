@@ -437,27 +437,27 @@ app.get('/api/tax-info', async (req, res) => {
 
 app.get('/api/resumo-vendas', async (req, res) => {
   const apiKey = req.headers['x-api-key'];
+  const { data_de, data_ate } = req.query;
 
   if (!apiKey) {
     return res.status(400).json({ error: 'API key não enviada' });
   }
 
+  let query = supabase.from('vendas').select('*').eq('api_key', apiKey);
+
+  if (data_de) {
+    query = query.gte('created_at', new Date(data_de).toISOString());
+  }
+
+  if (data_ate) {
+    const dataAteFull = new Date(data_ate);
+    dataAteFull.setHours(23, 59, 59, 999);
+    query = query.lte('created_at', dataAteFull.toISOString());
+  }
+
   try {
-    const { data: vendasPagas, error: errorPagas } = await supabase
-      .from('vendas')
-      .select('valor_liquido')
-      .eq('status', 'paid')
-      .eq('api_key', apiKey);
-
-    const { data: vendasPendentes, error: errorPendentes } = await supabase
-      .from('vendas')
-      .select('valor_liquido')
-      .eq('status', 'waiting_payment')
-      .eq('api_key', apiKey);
-
-    if (errorPagas || errorPendentes) {
-      throw new Error(errorPagas?.message || errorPendentes?.message);
-    }
+    const { data: vendasPagas } = await query.eq('status', 'paid');
+    const { data: vendasPendentes } = await query.eq('status', 'waiting_payment');
 
     const totalPagas = vendasPagas.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
     const totalPendentes = vendasPendentes.reduce((acc, v) => acc + (v.valor_liquido ?? 0), 0);
@@ -474,9 +474,10 @@ app.get('/api/resumo-vendas', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no resumo de vendas:', error);
-    res.status(500).json({ error: 'Erro interno ao gerar resumo de vendas' });
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
+
 
 app.get('/api/visitas', async (req, res) => {
   const apiKey = req.headers['x-api-key'];
