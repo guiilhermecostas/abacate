@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -14,6 +16,12 @@ const ABACATEPAY_TOKEN = process.env.ABACATEPAY_TOKEN;
 const UTMIFY_TOKEN = process.env.UTMIFY_API_KEY;
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('⚠️ JWT_SECRET não está definido no .env');
+  process.exit(1);
+}
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
@@ -166,14 +174,30 @@ async function salvarVendaNoSupabase(data, status) {
   }
 }
 
-app.post('/create-pix', async (req, res) => {
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Token não fornecido' });
+
+  const token = authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Token inválido' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // dados do usuário no req.user
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Token inválido ou expirado' });
+  }
+}
+
+app.post('/create-pix', authMiddleware, async (req, res) => {
   const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
 
   if (!amount || amount < 2000 || amount > 200000)
     return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$700,00)' });
 
   if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId)
-    return res.status(400).json({ error: 'Dados do cliente incompletos' });
+    return res.status(400).json({ error: 'Dados do cliente incompletos' }); 
 
   const sanitizedCustomer = {
     ...customer,
@@ -360,9 +384,6 @@ app.post('/api/login', async (req, res) => {
   const senhaValida = await bcrypt.compare(senha, user.senha);
   if (!senhaValida) return res.status(401).json({ error: 'Senha incorreta' });
 
-  const jwt = require('jsonwebtoken');
-  const JWT_SECRET = process.env.JWT_SECRET;
-
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
     expiresIn: '1d'
   });
@@ -374,6 +395,7 @@ app.post('/api/login', async (req, res) => {
     api_key: user.api_key
   });
 });
+
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
