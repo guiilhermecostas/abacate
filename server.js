@@ -381,8 +381,8 @@ app.post('/api/login', async (req, res) => {
 
   if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-  const senhaValida = await bcrypt.compare(senha, user.senha);
-  if (!senhaValida) return res.status(401).json({ error: 'Senha incorreta' });
+  // Comparação direta (sem hash)
+  if (senha !== user.senha) return res.status(401).json({ error: 'Senha incorreta' });
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
     expiresIn: '1d'
@@ -395,6 +395,7 @@ app.post('/api/login', async (req, res) => {
     api_key: user.api_key
   });
 });
+
 
 
 
