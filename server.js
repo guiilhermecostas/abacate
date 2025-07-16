@@ -204,7 +204,7 @@ app.post('/create-pix', async (req, res) => {
       tracking: tracking || {},
       fbp,
       fbc,
-      user_agent 
+      user_agent
     };
 
     await enviarEventoUtmify(dadosEvento, "waiting_payment");
@@ -359,6 +359,9 @@ app.post('/api/login', async (req, res) => {
 
   const senhaValida = await bcrypt.compare(senha, user.senha);
   if (!senhaValida) return res.status(401).json({ error: 'Senha incorreta' });
+
+  const jwt = require('jsonwebtoken');
+  const JWT_SECRET = process.env.JWT_SECRET;
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
     expiresIn: '1d'
