@@ -350,10 +350,10 @@ app.post('/api/cadastro', async (req, res) => {
 
   const { error } = await supabase.from('usuarios').insert({
     nome,
-    email,
+    email, 
     senha, 
     cpf,
-    api_key: 'api_' + Math.random().toString(36).substring(2, 15),
+    api_key: 'overpay_key_' + Math.random().toString(36).substring(2, 15),
     pin_key_int: Math.floor(1000 + Math.random() * 9000)
   });
 
