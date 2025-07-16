@@ -469,10 +469,10 @@ app.get('/api/resumo-vendas', async (req, res) => {
   for (const venda of data) {
     if (venda.status === 'paid') {
       vendasPagas.quantidade++;
-      vendasPagas.total += venda.total; 
+      vendasPagas.total += venda.amount;
     } else if (venda.status === 'waiting_payment') {
       vendasPendentes.quantidade++;
-      vendasPendentes.total += venda.total;
+      vendasPendentes.total += venda.amount;
     }
   }
   
