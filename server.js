@@ -314,5 +314,63 @@ setInterval(async () => {
   }
 }, 5000);
 
+app.post('/api/cadastro', async (req, res) => {
+  const { nome, email, senha, cpf } = req.body;
+
+  // verifica se usuário já existe
+  const { data: existingUser } = await supabase
+    .from('usuarios')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  if (existingUser) {
+    return res.status(400).json({ error: 'Usuário já cadastrado' });
+  }
+
+  const senhaHash = await bcrypt.hash(senha, 10);
+
+  const { error } = await supabase.from('usuarios').insert({
+    nome,
+    email,
+    senha: senhaHash,
+    cpf,
+    api_key: 'api_' + Math.random().toString(36).substring(2, 15),
+    pin_key_int: Math.floor(1000 + Math.random() * 9000)
+  });
+
+  if (error) {
+    return res.status(500).json({ error: 'Erro ao cadastrar usuário' });
+  }
+
+  res.status(201).json({ ok: true, msg: 'Usuário cadastrado com sucesso' });
+});
+
+app.post('/api/login', async (req, res) => {
+  const { email, senha } = req.body;
+
+  const { data: user } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('email', email)
+    .single();
+
+  if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
+
+  const senhaValida = await bcrypt.compare(senha, user.senha);
+  if (!senhaValida) return res.status(401).json({ error: 'Senha incorreta' });
+
+  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+    expiresIn: '1d'
+  });
+
+  res.json({
+    token,
+    nome: user.nome,
+    email: user.email,
+    api_key: user.api_key
+  });
+});
+
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
