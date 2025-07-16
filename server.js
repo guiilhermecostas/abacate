@@ -409,6 +409,27 @@ app.get('/api/validate-key', async (req, res) => {
   return res.json({ valid: true });
 });
 
+app.get('/api/tax-info', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key não enviada' });
+  }
+
+  const { data: user, error } = await supabase
+    .from('usuarios')
+    .select('percenttax, fixtax')
+    .eq('api_key', apiKey)
+    .single();
+
+  if (error || !user) {
+    return res.status(404).json({ error: 'Usuário não encontrado' });
+  }
+
+  return res.json({ percenttax: user.percenttax, fixtax: user.fixtax });
+});
+
+
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
