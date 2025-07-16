@@ -467,14 +467,15 @@ app.get('/api/resumo-vendas', async (req, res) => {
   let vendasPendentes = { quantidade: 0, total: 0 };
 
   for (const venda of data) {
-    if (venda.status === 'paga') {
+    if (venda.status === 'paid') {
       vendasPagas.quantidade++;
       vendasPagas.total += venda.total;
-    } else if (venda.status === 'pendente') {
+    } else if (venda.status === 'waiting_payment') {
       vendasPendentes.quantidade++;
       vendasPendentes.total += venda.total;
     }
   }
+  
 
   return res.json({ vendasPagas, vendasPendentes });
 });
