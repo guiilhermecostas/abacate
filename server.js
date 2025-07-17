@@ -635,8 +635,8 @@ app.post("/api/saldo", async (req, res) => {
           .from("saque")
           .select("valor_saque")
           .eq("api_key", api_key)
-          .in("status_saque", ["transferido", "pendente"]);  
-
+          .in("status_saque", ["Transferido", "Pendente"]);  
+ 
       if (saquesError) throw saquesError;
 
       const totalsaque = saques.reduce((sum, row) => sum + (parseFloat(row.valor_saque) || 0), 0);
