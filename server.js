@@ -789,31 +789,31 @@ app.get('/api/saques', async (req, res) => {
   }
 });
 
-app.post("/api/atualizar-utmify-key", async (req, res) => {
+app.post("/api/salvar-utmify", async (req, res) => {
   const { api_key, utmify_key } = req.body;
 
   if (!api_key || !utmify_key) {
-    return res.status(400).json({ message: "api_key e utmify_key são obrigatórios." });
+      return res.status(400).json({ message: "api_key e utmify_key são obrigatórios." });
   }
 
   try {
-    const { data, error } = await supabase
-      .from("usuarios")
-      .update({ utmify_key })
-      .eq("api_key", api_key);
+      const { data, error } = await supabase
+          .from("usuarios")
+          .update({ utmify_key })
+          .eq("api_key", api_key);
 
-    if (error) throw error;
+      if (error) {
+          console.error("Erro no Supabase:", error);
+          return res.status(500).json({ message: "Erro ao atualizar o usuário." });
+      }
 
-    if (data.length === 0) {
-      return res.status(404).json({ message: "Usuário não encontrado com esta API Key." });
-    }
-
-    res.json({ message: "Chave UTMIFY atualizada com sucesso.", data });
+      res.status(200).json({ message: "Chave atualizada com sucesso." });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erro interno ao atualizar a chave.", error: err.message });
+      console.error("Erro interno:", err);
+      res.status(500).json({ message: "Erro interno ao atualizar a chave." });
   }
 });
+
 
 
 
