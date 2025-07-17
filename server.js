@@ -228,7 +228,7 @@ app.post('/create-pix', async (req, res) => {
     const dadosEvento = {
       txid: pixData.id,
       amount,
-      customer: sanitizedCustomer, 
+      customer: sanitizedCustomer,
       tracking: tracking || {},
       fbp,
       fbc,
@@ -475,7 +475,7 @@ app.get('/api/resumo-vendas', async (req, res) => {
       vendasPendentes.total += venda.valor_liquido;
     }
   }
-  
+
 
   return res.json({ vendasPagas, vendasPendentes });
 });
@@ -601,7 +601,7 @@ app.get('/api/vendas', async (req, res) => {
       cpf: venda.taxid,
       email: venda.email,
       horario: venda.created_at,
-    })); 
+    }));
 
     return res.json({
       vendas,
@@ -612,6 +612,45 @@ app.get('/api/vendas', async (req, res) => {
   } catch (err) {
     console.error('Erro interno:', err);
     return res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+app.post('/api/saldo', async (req, res) => {
+  const { api_key } = req.body;
+
+  if (!api_key) {
+    return res.status(400).json({ error: 'API Key é obrigatória' });
+  }
+
+  try {
+    // Buscar total de vendas pagas
+    const { data: vendas, error: erroVendas } = await supabase
+      .from('vendas')
+      .select('valor_liquido')
+      .eq('api_key', api_key)
+      .eq('status', 'paid');
+
+    if (erroVendas) throw erroVendas;
+
+    const totalVenda = vendas.reduce((acc, venda) => acc + (venda.valor_liquido || 0), 0);
+
+    // Buscar total de saques transferidos
+    const { data: saques, error: erroSaques } = await supabase
+      .from('saque')
+      .select('valor_saque')
+      .eq('api_key', api_key)
+      .eq('status_saque', 'transferido'); 
+
+    if (erroSaques) throw erroSaques;
+
+    const totalSaque = saques.reduce((acc, saque) => acc + (saque.valor_saque || 0), 0);
+
+    const saldoDisponivel = totalVenda - totalSaque;
+
+    return res.json({ saldo: saldoDisponivel });
+  } catch (err) {
+    console.error('Erro ao calcular saldo:', err);
+    return res.status(500).json({ error: 'Erro interno ao calcular saldo' });
   }
 });
 
