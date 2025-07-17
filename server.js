@@ -725,7 +725,7 @@ app.get("/api/saldox", async (req, res) => {
       .eq("status", "paid");
 
     if (erroVendas) throw erroVendas;
-
+ 
     const totalVenda = vendasPagas.reduce(
       (acc, venda) => acc + parseFloat(venda.valor_liquido || 0),
       0
@@ -735,7 +735,7 @@ app.get("/api/saldox", async (req, res) => {
       .from("saque")
       .select("valor_saque")
       .eq("api_key", api_key)
-      .in("status_saque", ["transferido", "pendente"]);
+      .in("status_saque", ["Transferido", "Pendente"]);
 
     if (erroSaques) throw erroSaques;
 
