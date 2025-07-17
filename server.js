@@ -615,42 +615,38 @@ app.get('/api/vendas', async (req, res) => {
   }
 });
 
-app.post('/api/saldo', async (req, res) => {
+app.post("/api/saldo", async (req, res) => {
   const { api_key } = req.body;
 
-  if (!api_key) {
-    return res.status(400).json({ error: 'API Key é obrigatória' });
-  }
+  if (!api_key) return res.status(400).json({ error: "api_key obrigatória" });
 
   try {
-    // Buscar total de vendas pagas
-    const { data: vendas, error: erroVendas } = await supabase
-      .from('vendas')
-      .select('valor_liquido')
-      .eq('api_key', api_key)
-      .eq('status', 'paid');
+      const { data: vendas, error: vendasError } = await supabase
+          .from("vendas")
+          .select("valor_liquido")
+          .eq("api_key", api_key)
+          .eq("status", "paid");
 
-    if (erroVendas) throw erroVendas;
+      if (vendasError) throw vendasError;
 
-    const totalVenda = vendas.reduce((acc, venda) => acc + (venda.valor_liquido || 0), 0);
+      const totalvenda = vendas.reduce((sum, row) => sum + (parseFloat(row.valor_liquido) || 0), 0);
 
-    // Buscar total de saques transferidos
-    const { data: saques, error: erroSaques } = await supabase
-      .from('saque')
-      .select('valor_saque')
-      .eq('api_key', api_key)
-      .eq('status_saque', 'transferido'); 
+      const { data: saques, error: saquesError } = await supabase
+          .from("saque")
+          .select("valor_saque")
+          .eq("api_key", api_key)
+          .eq("status_saque", "transferido");
 
-    if (erroSaques) throw erroSaques;
+      if (saquesError) throw saquesError;
 
-    const totalSaque = saques.reduce((acc, saque) => acc + (saque.valor_saque || 0), 0);
+      const totalsaque = saques.reduce((sum, row) => sum + (parseFloat(row.valor_saque) || 0), 0);
 
-    const saldoDisponivel = totalVenda - totalSaque;
+      const saldo = totalvenda - totalsaque;
 
-    return res.json({ saldo: saldoDisponivel });
-  } catch (err) {
-    console.error('Erro ao calcular saldo:', err);
-    return res.status(500).json({ error: 'Erro interno ao calcular saldo' });
+      res.json({ saldo });
+  } catch (error) {
+      console.error("Erro ao calcular saldo:", error);
+      res.status(500).json({ error: "Erro interno ao buscar saldo" });
   }
 });
 
