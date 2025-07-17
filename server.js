@@ -789,6 +789,32 @@ app.get('/api/saques', async (req, res) => {
   }
 });
 
+app.post("/api/atualizar-utmify-key", async (req, res) => {
+  const { api_key, utmify_key } = req.body;
+
+  if (!api_key || !utmify_key) {
+    return res.status(400).json({ message: "api_key e utmify_key são obrigatórios." });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ utmify_key })
+      .eq("api_key", api_key);
+
+    if (error) throw error;
+
+    if (data.length === 0) {
+      return res.status(404).json({ message: "Usuário não encontrado com esta API Key." });
+    }
+
+    res.json({ message: "Chave UTMIFY atualizada com sucesso.", data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro interno ao atualizar a chave.", error: err.message });
+  }
+});
+
 
 
 
