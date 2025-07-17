@@ -650,56 +650,68 @@ app.post("/api/saldo", async (req, res) => {
   }
 });
 
-app.post("/api/saque", async (req, res) => {
-  const { valor, tipo_saque, chave_saque, api_key } = req.body;
+// server.js ou routes/saque.js
+app.post("/api/solicitar-saque", async (req, res) => {
+  const { valor_saque, tipo_saque, chave_saque, api_key } = req.body;
 
-  if (!valor || !tipo_saque || !chave_saque || !api_key) {
-    return res.status(400).json({ error: "Campos obrigatórios ausentes." });
+  if (!valor_saque || !tipo_saque || !chave_saque || !api_key) {
+    return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
 
-  const { data: vendas, error: erroVendas } = await supabase
-    .from("vendas")
-    .select("valor_liquido")
-    .eq("api_key", api_key)
-    .eq("status", "paid");
+  try {
+    // Obtem total de vendas pagas
+    const { data: vendasPagas, error: erroVendas } = await supabase
+      .from("vendas")
+      .select("valor_liquido")
+      .eq("api_key", api_key)
+      .eq("status", "paid");
 
-  if (erroVendas) return res.status(500).json({ error: "Erro ao buscar vendas." });
+    if (erroVendas) throw erroVendas;
 
-  const totalVendas = vendas.reduce((acc, venda) => acc + parseFloat(venda.valor_liquido || 0), 0);
+    const totalVenda = vendasPagas.reduce(
+      (acc, venda) => acc + parseFloat(venda.valor_liquido || 0),
+      0
+    );
 
-  const { data: saques, error: erroSaques } = await supabase
-    .from("saque")
-    .select("valor_saque")
-    .eq("api_key", api_key)
-    .eq("status_saque", "transferido");
+    // Obtem total de saques transferidos
+    const { data: saquesTransferidos, error: erroSaques } = await supabase
+      .from("saque")
+      .select("valor_saque")
+      .eq("api_key", api_key)
+      .eq("status_saque", "transferido");
 
-  if (erroSaques) return res.status(500).json({ error: "Erro ao buscar saques." });
+    if (erroSaques) throw erroSaques;
 
-  const totalSaques = saques.reduce((acc, saque) => acc + parseFloat(saque.valor_saque || 0), 0);
+    const totalSaque = saquesTransferidos.reduce(
+      (acc, saque) => acc + parseFloat(saque.valor_saque || 0),
+      0
+    );
 
-  const saldoDisponivel = totalVendas - totalSaques;
+    const saldoDisponivel = totalVenda - totalSaque;
 
-  if (parseFloat(valor) > saldoDisponivel) {
-    return res.status(400).json({ error: "Saldo insuficiente." });
+    if (valor_saque > saldoDisponivel) {
+      return res.status(400).json({ error: "Saldo insuficiente" });
+    }
+
+    // Inserção do saque como pendente
+    const { error: erroInsert } = await supabase.from("saque").insert([
+      {
+        valor_saque,
+        tipo_saque,
+        chave_saque,
+        status_saque: "Pendente",
+        api_key,
+      },
+    ]);
+
+    if (erroInsert) throw erroInsert;
+
+    return res.status(200).json({ success: true, message: "Saque solicitado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao solicitar saque:", error);
+    return res.status(500).json({ error: "Erro interno do servidor" });
   }
-
-  const { error: erroInsercao } = await supabase.from("saque").insert([
-    {
-      valor_saque: valor,
-      tipo_saque,
-      chave_saque,
-      api_key,
-      status_saque: "Pendente",
-    },
-  ]);
-
-  if (erroInsercao) {
-    return res.status(500).json({ error: "Erro ao registrar saque." });
-  }
-
-  res.json({ message: "Saque solicitado com sucesso!" });
 });
-
 
 
 
