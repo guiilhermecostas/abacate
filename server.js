@@ -584,7 +584,7 @@ app.get('/api/vendas', async (req, res) => {
 
     const { data, error, count } = await supabase
       .from('vendas')
-      .select('valor_liquido, status, name, email, created_at, cellphone', { count: 'exact' })
+      .select('valor_liquido, status, name, email, created_at, cellphone, taxid', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -598,6 +598,7 @@ app.get('/api/vendas', async (req, res) => {
       status: formatarStatus(venda.status),
       nome: venda.name,
       telefone: venda.cellphone,
+      cpf: venda.taxid,
       email: venda.email,
       horario: venda.created_at,
     })); 
