@@ -757,6 +757,39 @@ app.get("/api/saldox", async (req, res) => {
   }
 });
 
+app.get('/api/saques', async (req, res) => {
+  const { api_key } = req.query;
+
+  if (!api_key) {
+    return res.status(400).json({ error: 'API Key obrigatória' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('saque')
+      .select('valor_saque, created_at, status_saque')
+      .eq('api_key', api_key)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar saques:', error);
+      return res.status(500).json({ error: 'Erro ao buscar saques' });
+    }
+
+    const listaSaques = data.map((item) => ({
+      valor: item.valor_saque,
+      horario: item.created_at,
+      status: item.status_saque,
+    }));
+
+    return res.json(listaSaques);
+  } catch (err) {
+    console.error('Erro interno:', err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+
 
 
 
