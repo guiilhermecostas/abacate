@@ -658,7 +658,6 @@ app.post("/api/solicitar-saque", async (req, res) => {
   }
 
   try {
-    // Obtem total de vendas pagas
     const { data: vendasPagas, error: erroVendas } = await supabase
       .from("vendas")
       .select("valor_liquido")
@@ -672,7 +671,6 @@ app.post("/api/solicitar-saque", async (req, res) => {
       0
     );
 
-    // Obtem total de saques transferidos
     const { data: saquesTransferidos, error: erroSaques } = await supabase
       .from("saque")
       .select("valor_saque")
@@ -711,6 +709,54 @@ app.post("/api/solicitar-saque", async (req, res) => {
     return res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
+
+app.get("/api/saldox", async (req, res) => {
+  const { api_key } = req.query;
+
+  if (!api_key) {
+    return res.status(400).json({ error: "API Key obrigatória" });
+  }
+
+  try {
+    const { data: vendasPagas, error: erroVendas } = await supabase
+      .from("vendas")
+      .select("valor_liquido")
+      .eq("api_key", api_key)
+      .eq("status", "paid");
+
+    if (erroVendas) throw erroVendas;
+
+    const totalVenda = vendasPagas.reduce(
+      (acc, venda) => acc + parseFloat(venda.valor_liquido || 0),
+      0
+    );
+
+    const { data: saques, error: erroSaques } = await supabase
+      .from("saque")
+      .select("valor_saque")
+      .eq("api_key", api_key)
+      .in("status_saque", ["transferido", "pendente"]);
+
+    if (erroSaques) throw erroSaques;
+
+    const totalSaque = saques.reduce(
+      (acc, saque) => acc + parseFloat(saque.valor_saque || 0),
+      0
+    );
+
+    const saldoDisponivel = totalVenda - totalSaque;
+
+    return res.status(200).json({
+      totalVenda,
+      totalSaque,
+      saldoDisponivel,
+    });
+  } catch (error) {
+    console.error("Erro ao calcular saldo:", error);
+    return res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
 
 
 
