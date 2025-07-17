@@ -635,15 +635,14 @@ app.post("/api/saldo", async (req, res) => {
           .from("saque")
           .select("valor_saque")
           .eq("api_key", api_key)
-          .eq("status_saque", ["transferido", "pendente"]);
- 
-      if (saquesError) throw saquesError; 
+          .in("status_saque", ["transferido", "pendente"]);  
+
+      if (saquesError) throw saquesError;
 
       const totalsaque = saques.reduce((sum, row) => sum + (parseFloat(row.valor_saque) || 0), 0);
 
       const saldo = totalvenda - totalsaque;
 
-      // Retornando também o total sacado
       res.json({ saldo, totalSacado: totalsaque });
   } catch (error) {
       console.error("Erro ao calcular saldo:", error);
