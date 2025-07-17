@@ -814,6 +814,31 @@ app.post("/api/salvar-utmify", async (req, res) => {
   }
 });
 
+app.post("/api/salvar-pixel", async (req, res) => {
+  const { api_key, meta_pixel_id } = req.body;
+
+  if (!api_key || !meta_pixel_id) {
+      return res.status(400).json({ message: "api_key e utmify_key são obrigatórios." });
+  }
+
+  try {
+      const { data, error } = await supabase
+          .from("usuarios")
+          .update({ meta_pixel_id })
+          .eq("api_key", api_key); 
+
+      if (error) {
+          console.error("Erro no Supabase:", error);
+          return res.status(500).json({ message: "Erro ao atualizar o usuário." });
+      }
+
+      res.status(200).json({ message: "Chave atualizada com sucesso." });
+  } catch (err) {
+      console.error("Erro interno:", err);
+      res.status(500).json({ message: "Erro interno ao atualizar a chave." });
+  }
+}); 
+
 
 
 
