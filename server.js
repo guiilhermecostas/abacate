@@ -790,18 +790,14 @@ app.get('/api/saques', async (req, res) => {
 });
 
 app.post('/api/salvar-chave', async (req, res) => {
-  const { tipo, valor, api_key } = req.body;
+  const { campo, valor, api_key } = req.body;
 
-  if (!tipo || !valor || !api_key) {
-    return res.status(400).json({ erro: 'Parâmetros incompletos.' });
+  if (!campo || !valor || !api_key) {
+    return res.status(400).json({ erro: 'Dados incompletos.' });
   }
 
-  const campo = tipo === 'utmify' ? 'utmify_key'
-              : tipo === 'meta'   ? 'meta_key'
-              : null;
-
-  if (!campo) {
-    return res.status(400).json({ erro: 'Tipo inválido. Use "utmify" ou "meta".' });
+  if (!['utmify_key', 'meta_key'].includes(campo)) {
+    return res.status(400).json({ erro: 'Campo inválido.' });
   }
 
   const { error } = await supabase
@@ -810,18 +806,11 @@ app.post('/api/salvar-chave', async (req, res) => {
     .eq('api_key', api_key);
 
   if (error) {
-    console.error(error);
-    return res.status(500).json({ erro: 'Erro ao atualizar chave.' });
+    return res.status(500).json({ erro: 'Erro interno ao salvar chave.' });
   }
 
-  return res.status(200).json({ mensagem: 'Chave atualizada com sucesso.' });
+  res.json({ sucesso: true });
 });
-
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
-
-
 
 
 
