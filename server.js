@@ -643,14 +643,14 @@ app.post("/api/saldo", async (req, res) => {
 
       const saldo = totalvenda - totalsaque;
 
-      res.json({ saldo });
+      // Retornando também o total sacado
+      res.json({ saldo, totalSacado: totalsaque });
   } catch (error) {
       console.error("Erro ao calcular saldo:", error);
       res.status(500).json({ error: "Erro interno ao buscar saldo" });
   }
 });
 
-// server.js ou routes/saque.js
 app.post("/api/solicitar-saque", async (req, res) => {
   const { valor_saque, tipo_saque, chave_saque, api_key } = req.body;
 
