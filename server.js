@@ -650,6 +650,57 @@ app.post("/api/saldo", async (req, res) => {
   }
 });
 
+app.post("/api/saque", async (req, res) => {
+  const { valor, tipo_saque, chave_saque, api_key } = req.body;
+
+  if (!valor || !tipo_saque || !chave_saque || !api_key) {
+    return res.status(400).json({ error: "Campos obrigatórios ausentes." });
+  }
+
+  const { data: vendas, error: erroVendas } = await supabase
+    .from("vendas")
+    .select("valor_liquido")
+    .eq("api_key", api_key)
+    .eq("status", "paid");
+
+  if (erroVendas) return res.status(500).json({ error: "Erro ao buscar vendas." });
+
+  const totalVendas = vendas.reduce((acc, venda) => acc + parseFloat(venda.valor_liquido || 0), 0);
+
+  const { data: saques, error: erroSaques } = await supabase
+    .from("saque")
+    .select("valor_saque")
+    .eq("api_key", api_key)
+    .eq("status_saque", "transferido");
+
+  if (erroSaques) return res.status(500).json({ error: "Erro ao buscar saques." });
+
+  const totalSaques = saques.reduce((acc, saque) => acc + parseFloat(saque.valor_saque || 0), 0);
+
+  const saldoDisponivel = totalVendas - totalSaques;
+
+  if (parseFloat(valor) > saldoDisponivel) {
+    return res.status(400).json({ error: "Saldo insuficiente." });
+  }
+
+  const { error: erroInsercao } = await supabase.from("saque").insert([
+    {
+      valor_saque: valor,
+      tipo_saque,
+      chave_saque,
+      api_key,
+      status_saque: "Pendente",
+    },
+  ]);
+
+  if (erroInsercao) {
+    return res.status(500).json({ error: "Erro ao registrar saque." });
+  }
+
+  res.json({ message: "Saque solicitado com sucesso!" });
+});
+
+
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
