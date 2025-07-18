@@ -4,12 +4,12 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-app.use(cors()); 
+app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -622,32 +622,32 @@ app.post("/api/saldo", async (req, res) => {
   if (!api_key) return res.status(400).json({ error: "api_key obrigatória" });
 
   try {
-      const { data: vendas, error: vendasError } = await supabase
-          .from("vendas")
-          .select("valor_liquido")
-          .eq("api_key", api_key)
-          .eq("status", "paid");
+    const { data: vendas, error: vendasError } = await supabase
+      .from("vendas")
+      .select("valor_liquido")
+      .eq("api_key", api_key)
+      .eq("status", "paid");
 
-      if (vendasError) throw vendasError;
+    if (vendasError) throw vendasError;
 
-      const totalvenda = vendas.reduce((sum, row) => sum + (parseFloat(row.valor_liquido) || 0), 0);
+    const totalvenda = vendas.reduce((sum, row) => sum + (parseFloat(row.valor_liquido) || 0), 0);
 
-      const { data: saques, error: saquesError } = await supabase
-          .from("saque")
-          .select("valor_saque")
-          .eq("api_key", api_key)
-          .in("status_saque", ["Transferido", "Pendente"]);  
- 
-      if (saquesError) throw saquesError;
+    const { data: saques, error: saquesError } = await supabase
+      .from("saque")
+      .select("valor_saque")
+      .eq("api_key", api_key)
+      .in("status_saque", ["Transferido", "Pendente"]);
 
-      const totalsaque = saques.reduce((sum, row) => sum + (parseFloat(row.valor_saque) || 0), 0);
+    if (saquesError) throw saquesError;
 
-      const saldo = totalvenda - totalsaque;
+    const totalsaque = saques.reduce((sum, row) => sum + (parseFloat(row.valor_saque) || 0), 0);
 
-      res.json({ saldo, totalSacado: totalsaque });
+    const saldo = totalvenda - totalsaque;
+
+    res.json({ saldo, totalSacado: totalsaque });
   } catch (error) {
-      console.error("Erro ao calcular saldo:", error);
-      res.status(500).json({ error: "Erro interno ao buscar saldo" });
+    console.error("Erro ao calcular saldo:", error);
+    res.status(500).json({ error: "Erro interno ao buscar saldo" });
   }
 });
 
@@ -726,7 +726,7 @@ app.get("/api/saldox", async (req, res) => {
       .eq("status", "paid");
 
     if (erroVendas) throw erroVendas;
- 
+
     const totalVenda = vendasPagas.reduce(
       (acc, venda) => acc + parseFloat(venda.valor_liquido || 0),
       0
@@ -842,7 +842,11 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
       return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
     }
 
-    const imagePath = data.path;
+    const { data: publicUrlData } = supabase.storage
+      .from('productsimage')
+      .getPublicUrl(fileName);
+
+    const imageUrl = publicUrlData.publicUrl;
 
     const { error: insertError } = await supabase.from('products').insert([
       {
@@ -850,7 +854,7 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
         details,
         type,
         offer: parseFloat(offer),
-        image: imagePath,
+        image: imageUrl,
       },
     ]);
 
