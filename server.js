@@ -918,7 +918,7 @@ app.get('/api/produtos/detalhe', async (req, res) => {
   }
 });
 
-app.put('/api/produtos/:id', async (req, res) => {
+app.put('/api/produtos/detalhe/:id', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
     const { id } = req.params;
