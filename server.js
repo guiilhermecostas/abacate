@@ -918,11 +918,16 @@ app.get('/api/produtos/detalhe', async (req, res) => {
   }
 });
 
-app.put('/api/produtos/detalhe/:id', async (req, res) => {
+app.put('/api/produtos/:id', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
     const { id } = req.params;
+    const apiKey = req.headers['x-api-key'];
+
     const { nome, details, type, offer, status } = req.body;
+
+    if (!id || !apiKey) {
+      return res.status(400).json({ error: 'ID ou API key ausente.' });
+    }
 
     const { error } = await supabase
       .from('products')
@@ -931,20 +936,20 @@ app.put('/api/produtos/detalhe/:id', async (req, res) => {
         details,
         type,
         offer,
-        status
+        status,
       })
       .eq('id', id)
       .eq('api_key', apiKey);
 
     if (error) {
-      console.error(error);
+      console.error('Erro ao atualizar produto:', error.message);
       return res.status(500).json({ error: 'Erro ao atualizar produto.' });
     }
 
-    res.status(200).json({ message: 'Produto atualizado com sucesso.' });
+    res.status(200).send('Produto atualizado com sucesso.');
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro interno.' });
+    console.error('Erro inesperado:', err.message);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
 
