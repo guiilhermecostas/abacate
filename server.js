@@ -855,17 +855,17 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
       imageUrl = publicUrlData.publicUrl;
     }
 
-    const { error: insertError } = await supabase
-      .from('products')
-      .insert([{
+    const { error: insertError } = await supabase.from('products').insert([
+      {
         name,
         details,
-        type,
-        offer,
-        image: imageUrl,
+        type, 
+        offer: parseFloat(offer),
+        image: imagePath,
         api_key: apiKey,
-        status: 'Aprovado',
-      }]);
+        status: 'Aprovado', // padrão como solicitado
+      },
+    ]);
 
     if (insertError) {
       console.error('Erro ao salvar no banco:', insertError.message);
