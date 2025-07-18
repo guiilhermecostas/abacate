@@ -848,6 +848,10 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
     const parsedOffer = parseFloat(
       offer.replace('R$', '').replace('.', '').replace(',', '.').trim()
     );
+    
+    if (isNaN(parsedOffer) || parsedOffer < 3) {
+      return res.status(400).json({ error: 'O valor mínimo do produto é R$ 3,00.' });
+    }
 
     const { error: insertError } = await supabase.from('products').insert([
       {
