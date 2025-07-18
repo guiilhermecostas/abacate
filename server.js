@@ -830,7 +830,7 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
       imageName = `${Date.now()}_${req.file.originalname}`;
       const { error: uploadError } = await supabase.storage
         .from('productsimage')
-        .upload(imageName, req.file.buffer, {
+        .upload(imageName, req.file.buffer, { 
           contentType: req.file.mimetype,
         });
 
@@ -851,6 +851,7 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
           type,
           offer: parsedOffer,
           image: imageName,
+          status: 'Aprovado',
         },
       ]);
 
