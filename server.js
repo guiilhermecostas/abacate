@@ -367,7 +367,7 @@ app.post('/api/cadastro', async (req, res) => {
     first_acess: 'sim'
   });
 
-  if (error) { 
+  if (error) {
     return res.status(500).json({ error: 'Erro ao cadastrar usuário' });
   }
 
@@ -891,7 +891,7 @@ app.get('/api/produtos/detalhe', async (req, res) => {
   try {
     const { data: produtos, error } = await supabase
       .from('products')
-      .select('name, image, created_at, status') 
+      .select('name, image, created_at, status')
       .eq('api_key', apiKey)
       .order('created_at', { ascending: false });
 
@@ -928,17 +928,17 @@ app.put('/api/produtos/:id', async (req, res) => {
 
     const { name, details, type, offer, status } = req.body;
 
-    if (!name) return res.status(400).json({ error: 'Campo name (nome) é obrigatório.' });
-    if (!details) return res.status(400).json({ error: 'Campo details (descrição) é obrigatório.' });
-    if (!type) return res.status(400).json({ error: 'Campo type (tipo) é obrigatório.' });
-    if (offer === undefined || offer === null || isNaN(Number(offer))) return res.status(400).json({ error: 'Campo offer (preço) é obrigatório e deve ser número.' });
-    if (!status) return res.status(400).json({ error: 'Campo status é obrigatório.' });
+    if (!name) return res.status(400).json({ error: 'Campo name é obrigatório' });
+    if (!details) return res.status(400).json({ error: 'Campo details é obrigatório' });
+    if (!type) return res.status(400).json({ error: 'Campo type é obrigatório' });
+    if (offer === undefined || isNaN(Number(offer))) return res.status(400).json({ error: 'Campo offer inválido' });
+    if (!status) return res.status(400).json({ error: 'Campo status é obrigatório' });
 
     // Checa se produto existe e pertence a essa apiKey
     const { data: produtoExistente, error: fetchError } = await supabase
       .from('products')
       .select('id')
-      .eq('id', id)
+      .eq('id', id) 
       .eq('api_key', apiKey)
       .single();
 
