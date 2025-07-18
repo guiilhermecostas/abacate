@@ -818,66 +818,62 @@ const upload = multer({ storage });
 
 app.post('/api/produtos', upload.single('image'), async (req, res) => {
   try {
-    const { name, details, type, offer } = req.body;
-    const imageFile = req.file;
+    console.log('📦 Requisição recebida para /api/produtos');
+
     const apiKey = req.headers['x-api-key'];
+    const { name, details, type, offer } = req.body;
 
-    if (!name || !details || !type || !offer || !apiKey) {
-      return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
+    console.log('Body:', { name, details, type, offer });
+    console.log('API Key:', apiKey);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Imagem obrigatória.' });
     }
 
-    let imageUrl = null;
+    const fileName = `${Date.now()}-${req.file.originalname}`;
 
-    if (imageFile) {
-      const ext = path.extname(imageFile.originalname);
-      const fileName = `${uuidv4()}${ext}`;
-      const filePath = `productsimage/${fileName}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('productsimage')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+      });
 
-      const fileBuffer = fs.readFileSync(imageFile.path);
-      const { error: uploadError } = await supabase.storage
-        .from('productsimage')
-        .upload(filePath, fileBuffer, {
-          contentType: imageFile.mimetype,
-        });
-
-      fs.unlinkSync(imageFile.path); // Apaga o arquivo temporário
-
-      if (uploadError) {
-        console.error('Erro ao fazer upload da imagem:', uploadError.message);
-        return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
-      }
-
-      const { data: publicUrlData } = supabase
-        .storage
-        .from('productsimage')
-        .getPublicUrl(filePath);
-
-      imageUrl = publicUrlData.publicUrl;
+    if (uploadError) {
+      console.error('Erro ao fazer upload da imagem:', uploadError.message);
+      return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
     }
+
+    const imagePath = uploadData.path;
+
+    const parsedOffer = parseFloat(
+      offer.replace('R$', '').replace('.', '').replace(',', '.').trim()
+    );
 
     const { error: insertError } = await supabase.from('products').insert([
       {
         name,
         details,
-        type, 
-        offer: parseFloat(offer),
+        type,
+        offer: parsedOffer,
         image: imagePath,
         api_key: apiKey,
-        status: 'Aprovado', // padrão como solicitado
+        status: 'Aprovado',
       },
     ]);
 
     if (insertError) {
-      console.error('Erro ao salvar no banco:', insertError.message);
+      console.error('Erro ao inserir no Supabase:', insertError.message);
       return res.status(500).json({ error: 'Erro ao salvar produto no banco.' });
     }
 
-    res.status(200).json({ message: 'Produto salvo com sucesso!' });
-  } catch (error) {
-    console.error('Erro no servidor:', error.message);
+    console.log('✅ Produto criado com sucesso!');
+    res.status(200).json({ message: 'Produto salvo com sucesso.' });
+  } catch (err) {
+    console.error('Erro inesperado:', err.message);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
+
 
 
 
