@@ -1,14 +1,15 @@
 require('dotenv').config();
+const multer = require('multer');
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcrypt'); 
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-app.use(cors());
+app.use(cors()); 
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
