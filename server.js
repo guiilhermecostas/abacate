@@ -812,6 +812,59 @@ app.post('/api/salvar-chave', async (req, res) => {
   res.json({ sucesso: true });
 });
 
+app.post('/api/produtos', upload.single('imagem'), async (req, res) => {
+  try {
+    const { nome, descricao, tipo, preco } = req.body;
+    const imagemFile = req.file; 
+
+    let imagemUrl = null;
+
+    if (imagemFile) {
+      const nomeArquivo = `${crypto.randomUUID()}${path.extname(imagemFile.originalname)}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('productsimage')
+        .upload(nomeArquivo, imagemFile.buffer, {
+          contentType: imagemFile.mimetype,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Erro ao subir imagem:', uploadError);
+        return res.status(500).json({ error: 'Erro ao subir imagem' });
+      }
+
+      const { data } = supabase.storage.from('productsimage');
+      imagemUrl = data.publicUrl
+        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/productsimage/${nomeArquivo}`
+        : null;
+    }
+
+    const { data: produto, error: insertError } = await supabase
+      .from('products')
+      .insert([
+        {
+          nome,
+          descricao,
+          tipo,
+          preco,
+          imagem_url: imagemUrl,
+        },
+      ])
+      .select();
+
+    if (insertError) {
+      console.error('Erro ao salvar produto:', insertError);
+      return res.status(500).json({ error: 'Erro ao salvar produto' });
+    }
+
+    return res.status(201).json({ message: 'Produto criado com sucesso', produto });
+  } catch (err) {
+    console.error('Erro geral:', err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 
 
 
