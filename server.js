@@ -848,7 +848,7 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
     const parsedOffer = parseFloat(
       offer.replace('R$', '').replace('.', '').replace(',', '.').trim()
     );
-    
+
     if (isNaN(parsedOffer) || parsedOffer < 3) {
       return res.status(400).json({ error: 'O valor mínimo do produto é R$ 3,00.' });
     }
@@ -877,6 +877,44 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
+
+app.get('/api/produtos/detalhe', async (req, res) => {
+  const apiKey = req.query.api_key;
+
+  if (!apiKey) {
+    return res.status(400).json({ erro: 'api_key é obrigatória' });
+  }
+
+  try {
+    const { data: produtos, error } = await supabase
+      .from('products')
+      .select('name, image, created_at, status') 
+      .eq('api_key', apiKey)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar produtos:', error);
+      return res.status(500).json({ erro: 'Erro ao buscar produtos' });
+    }
+
+    if (!produtos || produtos.length === 0) {
+      return res.status(200).json({ mensagem: 'nao existe produto criado' });
+    }
+
+    const produtosFormatados = produtos.map((produto) => ({
+      nome: produto.name,
+      imagem: `https://wxufhqbbfzeqredinyjd.supabase.co/storage/v1/object/public/productsimage/${produto.image}`,
+      dataCriacao: new Date(produto.created_at).toLocaleDateString('pt-BR'),
+      status: produto.status
+    }));
+
+    return res.status(200).json(produtosFormatados);
+  } catch (err) {
+    console.error('Erro inesperado:', err);
+    return res.status(500).json({ erro: 'Erro interno no servidor' });
+  }
+});
+
 
 
 
