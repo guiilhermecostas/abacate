@@ -919,6 +919,10 @@ app.get('/api/produtos/detalhe', async (req, res) => {
 });
 
 app.put('/api/produtos/:id', async (req, res) => {
+  console.log('Recebido PUT para produto id:', req.params.id);
+  console.log('API Key:', req.headers['x-api-key']);
+  console.log('Body recebido:', req.body);
+  
   try {
     const { id } = req.params;  // id vem como string
     const apiKey = req.headers['x-api-key'];
