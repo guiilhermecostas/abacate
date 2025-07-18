@@ -819,28 +819,33 @@ const upload = multer({ storage });
 app.post('/api/produtos', upload.single('image'), async (req, res) => {
   try {
     const { name, details, type, offer } = req.body;
+    const apiKey = req.headers['x-api-key']; 
 
-    if (!name || !details || !type || !offer) {
-      return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+    if (!name || !details || !type || !offer || !apiKey) {
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
     }
 
-    let imageName = null;
+    let imageUrl = null;
 
     if (req.file) {
-      imageName = `${Date.now()}_${req.file.originalname}`;
+      const ext = req.file.originalname.split('.').pop();
+      const fileName = `${uuidv4()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('productsimage')
-        .upload(imageName, req.file.buffer, { 
+        .upload(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
         });
 
       if (uploadError) {
-        console.error('Erro ao salvar imagem no Storage:', uploadError.message);
-        return res.status(500).json({ error: 'Erro ao salvar imagem no Storage' });
+        return res.status(500).json({ error: 'Erro ao salvar imagem no storage.' });
       }
-    }
 
-    const parsedOffer = parseFloat(offer.replace(/[^\d.,]/g, '').replace(',', '.'));
+      const { data: publicUrlData } = supabase.storage
+        .from('productsimage')
+        .getPublicUrl(fileName);
+
+      imageUrl = publicUrlData.publicUrl;
+    }
 
     const { error: insertError } = await supabase
       .from('products')
@@ -849,21 +854,21 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
           name,
           details,
           type,
-          offer: parsedOffer,
-          image: imageName,
-          status: 'Aprovado',
+          offer,
+          image: imageUrl,
+          status: 'Aprovado',     
+          api_key: apiKey,     
         },
       ]);
 
     if (insertError) {
-      console.error('Erro ao salvar no banco:', insertError.message);
       return res.status(500).json({ error: 'Erro ao salvar produto no banco.' });
     }
 
-    res.status(201).json({ message: 'Produto criado com sucesso.' });
+    res.json({ message: 'Produto criado com sucesso!' });
   } catch (err) {
-    console.error('Erro inesperado:', err);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
 
