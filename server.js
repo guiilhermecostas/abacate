@@ -819,55 +819,62 @@ const upload = multer({ storage });
 app.post('/api/produtos', upload.single('image'), async (req, res) => {
   try {
     const { name, details, type, offer } = req.body;
-    const apiKey = req.headers['x-api-key']; 
+    const imageFile = req.file;
+    const apiKey = req.headers['x-api-key'];
 
     if (!name || !details || !type || !offer || !apiKey) {
-      return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+      return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
     }
 
     let imageUrl = null;
 
-    if (req.file) {
-      const ext = req.file.originalname.split('.').pop();
-      const fileName = `${uuidv4()}.${ext}`;
+    if (imageFile) {
+      const ext = path.extname(imageFile.originalname);
+      const fileName = `${uuidv4()}${ext}`;
+      const filePath = `productsimage/${fileName}`;
+
+      const fileBuffer = fs.readFileSync(imageFile.path);
       const { error: uploadError } = await supabase.storage
         .from('productsimage')
-        .upload(fileName, req.file.buffer, {
-          contentType: req.file.mimetype,
+        .upload(filePath, fileBuffer, {
+          contentType: imageFile.mimetype,
         });
 
+      fs.unlinkSync(imageFile.path); // Apaga o arquivo temporário
+
       if (uploadError) {
-        return res.status(500).json({ error: 'Erro ao salvar imagem no storage.' });
+        console.error('Erro ao fazer upload da imagem:', uploadError.message);
+        return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
       }
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicUrlData } = supabase
+        .storage
         .from('productsimage')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
 
       imageUrl = publicUrlData.publicUrl;
     }
 
     const { error: insertError } = await supabase
       .from('products')
-      .insert([
-        {
-          name,
-          details,
-          type,
-          offer,
-          image: imageUrl,
-          status: 'Aprovado',     
-          api_key: apiKey,     
-        },
-      ]);
+      .insert([{
+        name,
+        details,
+        type,
+        offer,
+        image: imageUrl,
+        api_key: apiKey,
+        status: 'Aprovado',
+      }]);
 
     if (insertError) {
+      console.error('Erro ao salvar no banco:', insertError.message);
       return res.status(500).json({ error: 'Erro ao salvar produto no banco.' });
     }
 
-    res.json({ message: 'Produto criado com sucesso!' });
-  } catch (err) {
-    console.error(err);
+    res.status(200).json({ message: 'Produto salvo com sucesso!' });
+  } catch (error) {
+    console.error('Erro no servidor:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
