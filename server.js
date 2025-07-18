@@ -922,11 +922,11 @@ app.put('/api/produtos/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const apiKey = req.headers['x-api-key'];
+    const { name, details, type, offer, status } = req.body;
 
+    // Verificações básicas
     if (!id) return res.status(400).json({ error: 'ID do produto é obrigatório.' });
     if (!apiKey) return res.status(401).json({ error: 'API Key é obrigatória.' });
-
-    const { name, details, type, offer, status } = req.body;
 
     if (!name) return res.status(400).json({ error: 'Campo name é obrigatório' });
     if (!details) return res.status(400).json({ error: 'Campo details é obrigatório' });
@@ -934,11 +934,11 @@ app.put('/api/produtos/:id', async (req, res) => {
     if (offer === undefined || isNaN(Number(offer))) return res.status(400).json({ error: 'Campo offer inválido' });
     if (!status) return res.status(400).json({ error: 'Campo status é obrigatório' });
 
-    // Checa se produto existe e pertence a essa apiKey
+    // Verifica se o produto existe e pertence à API Key
     const { data: produtoExistente, error: fetchError } = await supabase
       .from('products')
       .select('id')
-      .eq('id', id) 
+      .eq('id', id)
       .eq('api_key', apiKey)
       .single();
 
@@ -946,6 +946,7 @@ app.put('/api/produtos/:id', async (req, res) => {
       return res.status(404).json({ error: 'Produto não encontrado ou não autorizado.' });
     }
 
+    // Atualiza o produto
     const { error: updateError } = await supabase
       .from('products')
       .update({ name, details, type, offer, status })
@@ -963,6 +964,7 @@ app.put('/api/produtos/:id', async (req, res) => {
     return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
+
 
 
 
