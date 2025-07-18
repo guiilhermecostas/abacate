@@ -816,56 +816,47 @@ app.post('/api/salvar-chave', async (req, res) => {
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-app.post('/api/produtos', upload.single('image'), async (req, res) => {
+app.post('/api/produtos', upload.single('imagem'), async (req, res) => {
   try {
-    console.log('Requisição recebida');
+    const { nome, descricao, tipo, preco } = req.body;
+    const file = req.file;
 
-    const { name, details, type, offer } = req.body;
-    console.log('Body recebido:', { name, details, type, offer });
-
-    if (!req.file) {
-      console.log('Nenhuma imagem enviada');
+    if (!file) {
       return res.status(400).json({ error: 'Imagem obrigatória.' });
     }
 
-    const fileName = `${Date.now()}-${req.file.originalname}`;
-    console.log('Nome da imagem:', fileName);
+    const timestamp = Date.now();
+    const fileName = `${timestamp}-${file.originalname}`;
 
-    const { data, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('productsimage')
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
       });
 
     if (uploadError) {
-      console.error('Erro ao fazer upload:', uploadError.message);
+      console.error('Erro upload imagem:', uploadError.message);
       return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from('productsimage')
-      .getPublicUrl(fileName);
-
-    const imageUrl = publicUrlData.publicUrl;
-
     const { error: insertError } = await supabase.from('products').insert([
       {
-        name,
-        details,
-        type,
-        offer: parseFloat(offer),
-        image: imageUrl,
+        name: nome,
+        details: descricao,
+        type: tipo,
+        offer: parseFloat(preco.replace(/\D/g, '') / 100), 
+        image: uploadData.path, 
       },
     ]);
 
     if (insertError) {
-      console.error('Erro ao inserir no Supabase:', insertError.message);
-      return res.status(500).json({ error: 'Erro ao salvar no banco de dados.' });
+      console.error('Erro inserir produto:', insertError.message);
+      return res.status(500).json({ error: 'Erro ao salvar produto no banco.' });
     }
 
-    res.status(200).json({ message: 'Produto salvo com sucesso.' });
-  } catch (err) {
-    console.error('Erro inesperado:', err.message);
+    res.json({ message: 'Produto criado com sucesso.' });
+  } catch (error) {
+    console.error('Erro inesperado:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
