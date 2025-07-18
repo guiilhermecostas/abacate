@@ -918,6 +918,36 @@ app.get('/api/produtos/detalhe', async (req, res) => {
   }
 });
 
+app.put('/api/produtos/:id', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    const { id } = req.params;
+    const { nome, details, type, offer, status } = req.body;
+
+    const { error } = await supabase
+      .from('products')
+      .update({
+        name: nome,
+        details,
+        type,
+        offer,
+        status
+      })
+      .eq('id', id)
+      .eq('api_key', apiKey);
+
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao atualizar produto.' });
+    }
+
+    res.status(200).json({ message: 'Produto atualizado com sucesso.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
 
 
 
