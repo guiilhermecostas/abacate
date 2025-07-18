@@ -812,56 +812,47 @@ app.post('/api/salvar-chave', async (req, res) => {
   res.json({ sucesso: true });
 });
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 app.post('/api/produtos', upload.single('imagem'), async (req, res) => {
   try {
     const { nome, descricao, tipo, preco } = req.body;
-    const imagemFile = req.file; 
+    const imagem = req.file;
 
-    let imagemUrl = null;
+    if (!imagem) return res.status(400).json({ error: 'Imagem não enviada' });
 
-    if (imagemFile) {
-      const nomeArquivo = `${crypto.randomUUID()}${path.extname(imagemFile.originalname)}`;
+    const fileName = `${Date.now()}_${imagem.originalname}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('productsimage')
-        .upload(nomeArquivo, imagemFile.buffer, {
-          contentType: imagemFile.mimetype,
-          upsert: false,
-        });
+    const { error: uploadError } = await supabase.storage
+      .from('productsimage')
+      .upload(fileName, imagem.buffer, {
+        contentType: imagem.mimetype,
+        upsert: false,
+      });
 
-      if (uploadError) {
-        console.error('Erro ao subir imagem:', uploadError);
-        return res.status(500).json({ error: 'Erro ao subir imagem' });
-      }
-
-      const { data } = supabase.storage.from('productsimage');
-      imagemUrl = data.publicUrl
-        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/productsimage/${nomeArquivo}`
-        : null;
+    if (uploadError) {
+      return res.status(500).json({ error: 'Erro ao enviar imagem pro Supabase', details: uploadError.message });
     }
 
-    const { data: produto, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from('products')
-      .insert([
-        {
-          nome,
-          descricao,
-          tipo,
-          preco,
-          imagem_url: imagemUrl,
-        },
-      ])
-      .select();
+      .insert([{
+        name: nome,
+        details: descricao,
+        type: tipo,
+        offer: parseFloat(preco),
+        image: fileName,
+      }]);
 
     if (insertError) {
-      console.error('Erro ao salvar produto:', insertError);
-      return res.status(500).json({ error: 'Erro ao salvar produto' });
+      return res.status(500).json({ error: 'Erro ao salvar dados no Supabase', details: insertError.message });
     }
 
-    return res.status(201).json({ message: 'Produto criado com sucesso', produto });
+    res.status(200).json({ message: 'Produto salvo com sucesso!' });
   } catch (err) {
-    console.error('Erro geral:', err);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
