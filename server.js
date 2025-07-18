@@ -819,49 +819,49 @@ const upload = multer({ storage });
 app.post('/api/produtos', upload.single('imagem'), async (req, res) => {
   try {
     const { nome, descricao, tipo, preco } = req.body;
-    const file = req.file;
 
-    if (!file) {
+    if (!req.file) {
       return res.status(400).json({ error: 'Imagem obrigatória.' });
     }
 
-    const timestamp = Date.now();
-    const fileName = `${timestamp}-${file.originalname}`;
+    const fileName = `${Date.now()}-${req.file.originalname}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('productsimage')
-      .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
       });
 
     if (uploadError) {
-      console.error('Erro upload imagem:', uploadError.message);
-      return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
+      return res.status(500).json({ error: 'Erro ao fazer upload da imagem: ' + uploadError.message });
     }
+
+    const imagePath = uploadData.path;
+
+    // Ajuste o parse do preço, tirando o "R$" e vírgula
+    const precoFloat = parseFloat(preco.replace(/[^\d,]/g, '').replace(',', '.'));
 
     const { error: insertError } = await supabase.from('products').insert([
       {
         name: nome,
         details: descricao,
         type: tipo,
-        offer: parseFloat(preco.replace(/\D/g, '') / 100), 
-        image: uploadData.path, 
+        offer: precoFloat,
+        image: imagePath,
       },
     ]);
 
     if (insertError) {
-      console.error('Erro inserir produto:', insertError.message);
-      return res.status(500).json({ error: 'Erro ao salvar produto no banco.' });
+      console.error('Erro ao inserir no Supabase:', insertError);
+      return res.status(500).json({ error: 'Erro ao salvar produto no banco: ' + insertError.message });
     }
 
-    res.json({ message: 'Produto criado com sucesso.' });
-  } catch (error) {
-    console.error('Erro inesperado:', error);
+    res.status(200).json({ message: 'Produto salvo com sucesso.' });
+  } catch (err) {
+    console.error('Erro inesperado:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-
 
 
 
