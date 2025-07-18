@@ -363,7 +363,8 @@ app.post('/api/cadastro', async (req, res) => {
     api_key: 'overpay_key_' + Math.random().toString(36).substring(2, 15),
     pin_key_int: Math.floor(1000 + Math.random() * 9000),
     fixtax: 1.99,
-    percenttax: 5.9 
+    percenttax: 5.9,
+    first_acess: 'sim'
   });
 
   if (error) { 
