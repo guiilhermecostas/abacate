@@ -919,16 +919,16 @@ app.get('/api/produtos/detalhe', async (req, res) => {
 });
 
 app.put('/api/produtos/:id', async (req, res) => {
-  console.log('Recebido PUT para produto id:', req.params.id);
-  console.log('API Key:', req.headers['x-api-key']);
-  console.log('Body recebido:', req.body);
-  
   try {
-    const { id } = req.params;  // id vem como string
-    const apiKey = req.headers['x-api-key'];
+    const id = Number(req.params.id); // converte para número
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID do produto inválido.' });
+    }
 
-    if (!id) return res.status(400).json({ error: 'ID do produto é obrigatório.' });
-    if (!apiKey) return res.status(401).json({ error: 'API Key é obrigatória.' });
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API Key é obrigatória.' });
+    }
 
     const { name, details, type, offer, status } = req.body;
 
@@ -938,17 +938,11 @@ app.put('/api/produtos/:id', async (req, res) => {
     if (offer === undefined || isNaN(Number(offer))) return res.status(400).json({ error: 'Campo offer inválido' });
     if (!status) return res.status(400).json({ error: 'Campo status é obrigatório' });
 
-    // Converte id para número para garantir comparação correta
-    const produtoId = Number(id);
-    if (isNaN(produtoId)) {
-      return res.status(400).json({ error: 'ID do produto inválido' });
-    }
-
-    // Checa se produto existe e pertence a essa apiKey
+    // Verifica se o produto existe e pertence a essa apiKey
     const { data: produtoExistente, error: fetchError } = await supabase
       .from('products')
       .select('id')
-      .eq('id', produtoId)       // Usar id numérico
+      .eq('id', id)
       .eq('api_key', apiKey)
       .single();
 
@@ -959,7 +953,7 @@ app.put('/api/produtos/:id', async (req, res) => {
     const { error: updateError } = await supabase
       .from('products')
       .update({ name, details, type, offer, status })
-      .eq('id', produtoId)       // Usar id numérico
+      .eq('id', id)
       .eq('api_key', apiKey);
 
     if (updateError) {
@@ -973,11 +967,6 @@ app.put('/api/produtos/:id', async (req, res) => {
     return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-
-
-
-
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
