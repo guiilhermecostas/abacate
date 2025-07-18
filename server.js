@@ -923,37 +923,18 @@ app.put('/api/produtos/:id', async (req, res) => {
     const { id } = req.params;
     const apiKey = req.headers['x-api-key'];
 
-    if (!id) {
-      return res.status(400).json({ error: 'ID do produto é obrigatório.' });
-    }
+    if (!id) return res.status(400).json({ error: 'ID do produto é obrigatório.' });
+    if (!apiKey) return res.status(401).json({ error: 'API Key é obrigatória.' });
 
-    if (!apiKey) {
-      return res.status(401).json({ error: 'API Key é obrigatória.' });
-    }
-
-    // Use nomes consistentes com o insert (exemplo: name, details, type, offer, status)
     const { name, details, type, offer, status } = req.body;
 
-    // Validação campos obrigatórios para update (você pode ajustar se quiser campos opcionais)
-    if (!name || !details || !type) {
-      return res.status(400).json({ error: 'Campos name, details e type são obrigatórios.' });
-    }
+    if (!name) return res.status(400).json({ error: 'Campo name (nome) é obrigatório.' });
+    if (!details) return res.status(400).json({ error: 'Campo details (descrição) é obrigatório.' });
+    if (!type) return res.status(400).json({ error: 'Campo type (tipo) é obrigatório.' });
+    if (offer === undefined || offer === null || isNaN(Number(offer))) return res.status(400).json({ error: 'Campo offer (preço) é obrigatório e deve ser número.' });
+    if (!status) return res.status(400).json({ error: 'Campo status é obrigatório.' });
 
-    // Tratar offer: converter para número float se for string formatada
-    let parsedOffer = offer;
-    if (typeof offer === 'string') {
-      const precoLimpo = offer
-        .replace(/\s/g, '')
-        .replace('R$', '')
-        .replace(/\./g, '')
-        .replace(',', '.');
-      parsedOffer = parseFloat(precoLimpo);
-      if (isNaN(parsedOffer)) {
-        return res.status(400).json({ error: 'Preço inválido.' });
-      }
-    }
-
-    // Verifica se produto existe e pertence a essa apiKey
+    // Checa se produto existe e pertence a essa apiKey
     const { data: produtoExistente, error: fetchError } = await supabase
       .from('products')
       .select('id')
@@ -965,16 +946,9 @@ app.put('/api/produtos/:id', async (req, res) => {
       return res.status(404).json({ error: 'Produto não encontrado ou não autorizado.' });
     }
 
-    // Atualiza produto
     const { error: updateError } = await supabase
       .from('products')
-      .update({
-        name,
-        details,
-        type,
-        offer: parsedOffer,
-        status,
-      })
+      .update({ name, details, type, offer, status })
       .eq('id', id)
       .eq('api_key', apiKey);
 
@@ -983,12 +957,13 @@ app.put('/api/produtos/:id', async (req, res) => {
       return res.status(500).json({ error: 'Erro ao atualizar produto.' });
     }
 
-    res.status(200).json({ message: 'Produto atualizado com sucesso.' });
+    return res.status(200).json({ message: 'Produto atualizado com sucesso.' });
   } catch (err) {
     console.error('Erro inesperado:', err);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
+
 
 
 
