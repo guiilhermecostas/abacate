@@ -923,32 +923,69 @@ app.put('/api/produtos/:id', async (req, res) => {
     const { id } = req.params;
     const apiKey = req.headers['x-api-key'];
 
-    const { nome, details, type, offer, status } = req.body;
-
-    if (!id || !apiKey) {
-      return res.status(400).json({ error: 'ID ou API key ausente.' });
+    if (!id) {
+      return res.status(400).json({ error: 'ID do produto é obrigatório.' });
     }
 
-    const { error } = await supabase
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API Key é obrigatória.' });
+    }
+
+    // Use nomes consistentes com o insert (exemplo: name, details, type, offer, status)
+    const { name, details, type, offer, status } = req.body;
+
+    // Validação campos obrigatórios para update (você pode ajustar se quiser campos opcionais)
+    if (!name || !details || !type) {
+      return res.status(400).json({ error: 'Campos name, details e type são obrigatórios.' });
+    }
+
+    // Tratar offer: converter para número float se for string formatada
+    let parsedOffer = offer;
+    if (typeof offer === 'string') {
+      const precoLimpo = offer
+        .replace(/\s/g, '')
+        .replace('R$', '')
+        .replace(/\./g, '')
+        .replace(',', '.');
+      parsedOffer = parseFloat(precoLimpo);
+      if (isNaN(parsedOffer)) {
+        return res.status(400).json({ error: 'Preço inválido.' });
+      }
+    }
+
+    // Verifica se produto existe e pertence a essa apiKey
+    const { data: produtoExistente, error: fetchError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', id)
+      .eq('api_key', apiKey)
+      .single();
+
+    if (fetchError || !produtoExistente) {
+      return res.status(404).json({ error: 'Produto não encontrado ou não autorizado.' });
+    }
+
+    // Atualiza produto
+    const { error: updateError } = await supabase
       .from('products')
       .update({
-        name: nome,
+        name,
         details,
         type,
-        offer,
+        offer: parsedOffer,
         status,
       })
       .eq('id', id)
       .eq('api_key', apiKey);
 
-    if (error) {
-      console.error('Erro ao atualizar produto:', error.message);
+    if (updateError) {
+      console.error('Erro ao atualizar produto:', updateError.message);
       return res.status(500).json({ error: 'Erro ao atualizar produto.' });
     }
 
-    res.status(200).send('Produto atualizado com sucesso.');
+    res.status(200).json({ message: 'Produto atualizado com sucesso.' });
   } catch (err) {
-    console.error('Erro inesperado:', err.message);
+    console.error('Erro inesperado:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
