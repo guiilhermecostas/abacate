@@ -989,7 +989,19 @@ app.post('/api/orderbumps', async (req, res) => {
     return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
   }
 
+  // Validação da API Key (exemplo)
+  const { data: user, error: errorUser } = await supabase
+    .from('users')
+    .select('*')
+    .eq('api_key', apiKey)
+    .single();
+
+  if (errorUser || !user) {
+    return res.status(401).json({ error: 'API Key inválida' });
+  }
+
   try {
+    // Busca order bumps atuais do produto
     const { data: bumpsExistentes, error: errorCount } = await supabase
       .from('orderbumps')
       .select('*')
@@ -1008,6 +1020,7 @@ app.post('/api/orderbumps', async (req, res) => {
       return res.status(400).json({ error: 'Order bump já foi adicionado para este produto' });
     }
 
+    // Inserir order bump
     const { error: errorInsert } = await supabase
       .from('orderbumps')
       .insert([{ product_id, bump_id, api_key: apiKey }]);
@@ -1021,6 +1034,7 @@ app.post('/api/orderbumps', async (req, res) => {
     return res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
+
 
 app.get('/api/orderbumps/:product_id', async (req, res) => {
   const product_id = Number(req.params.product_id);
