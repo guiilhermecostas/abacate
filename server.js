@@ -990,21 +990,38 @@ app.post('/api/orderbumps', async (req, res) => {
   }
 
   try {
-    const { error } = await supabase
+    const { data: bumpsExistentes, error: errorCount } = await supabase
+      .from('orderbumps')
+      .select('*')
+      .eq('product_id', product_id);
+
+    if (errorCount) {
+      return res.status(500).json({ error: 'Erro ao verificar order bumps existentes' });
+    }
+
+    if (bumpsExistentes.length >= 3) {
+      return res.status(400).json({ error: 'Limite de 3 order bumps por produto atingido' });
+    }
+
+    const existeDuplicado = bumpsExistentes.some(bump => bump.bump_id === bump_id);
+    if (existeDuplicado) {
+      return res.status(400).json({ error: 'Order bump já foi adicionado para este produto' });
+    }
+
+    const { error: errorInsert } = await supabase
       .from('orderbumps')
       .insert([{ product_id, bump_id, api_key: apiKey }]);
 
-    if (error) {
-      console.error('Erro ao inserir order bump:', error);
+    if (errorInsert) {
       return res.status(500).json({ error: 'Erro ao inserir order bump' });
     }
 
     return res.status(200).json({ message: 'Order bump criado com sucesso!' });
   } catch (err) {
-    console.error('Erro inesperado:', err);
     return res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
+
 
 
 
