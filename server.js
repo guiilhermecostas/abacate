@@ -1022,6 +1022,25 @@ app.post('/api/orderbumps', async (req, res) => {
   }
 });
 
+app.get('/api/orderbumps/:product_id', async (req, res) => {
+  const product_id = Number(req.params.product_id);
+  if (!product_id) return res.status(400).json({ error: 'product_id inválido' });
+
+  try {
+    const { data, error } = await supabase
+      .from('orderbumps')
+      .select('id, bump_id, produtos(name)')
+      .eq('product_id', product_id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    return res.status(200).json(data);
+  } catch {
+    return res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});
+
+
 
 
 
