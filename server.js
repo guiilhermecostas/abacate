@@ -882,37 +882,35 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
 });
 
 app.get('/api/produtos/detalhe', async (req, res) => {
-  const apiKey = req.query.api_key;
+  const { api_key, id } = req.query;
 
-  if (!apiKey) {
-    return res.status(400).json({ erro: 'api_key é obrigatória' });
+  if (!api_key || !id) {
+    return res.status(400).json({ erro: 'api_key e id são obrigatórios' });
   }
 
   try {
-    const { data: produtos, error } = await supabase
+    const { data: produto, error } = await supabase
       .from('products')
-      .select('name, image, created_at, status, id')
-      .eq('api_key', apiKey)
-      .order('created_at', { ascending: false });
+      .select('name, image, created_at, status, id, details')
+      .eq('api_key', api_key)
+      .eq('id', id)
+      .single();
 
-    if (error) {
-      console.error('Erro ao buscar produtos:', error);
-      return res.status(500).json({ erro: 'Erro ao buscar produtos' });
+    if (error || !produto) {
+      console.error('Erro ao buscar produto:', error);
+      return res.status(404).json({ erro: 'Produto não encontrado' });
     }
 
-    if (!produtos || produtos.length === 0) {
-      return res.status(200).json({ mensagem: 'nao existe produto criado' });
-    }
-
-    const produtosFormatados = produtos.map((produto) => ({
+    const produtoFormatado = {
       id: produto.id,
       nome: produto.name,
       imagem: `https://wxufhqbbfzeqredinyjd.supabase.co/storage/v1/object/public/productsimage/${produto.image}`,
       dataCriacao: new Date(produto.created_at).toLocaleDateString('pt-BR'),
-      status: produto.status
-    }));
+      status: produto.status,
+      descricao: produto.details
+    };
 
-    return res.status(200).json(produtosFormatados);
+    return res.status(200).json(produtoFormatado);
   } catch (err) {
     console.error('Erro inesperado:', err);
     return res.status(500).json({ erro: 'Erro interno no servidor' });
