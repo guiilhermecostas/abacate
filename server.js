@@ -1040,6 +1040,24 @@ app.get('/api/orderbumps/:product_id', async (req, res) => {
   }
 });
 
+app.delete('/api/orderbumps/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const { error } = await supabase
+      .from('orderbumps')
+      .delete()
+      .eq('id', id);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    return res.status(200).json({ message: 'Order bump removido' });
+  } catch {
+    return res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});
+
 
 
 
