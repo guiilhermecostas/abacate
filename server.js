@@ -981,4 +981,32 @@ app.put('/api/produtos/:id', async (req, res) => {
 });
 
 
+app.post('/api/produtos/:id/add-bump', async (req, res) => {
+  const productId = parseInt(req.params.id);
+  const { bumpId } = req.body;
+
+  if (!productId || !bumpId) {
+    return res.status(400).json({ erro: 'ID do produto e bump são obrigatórios' });
+  }
+
+  try {
+    const { error } = await supabase
+      .from('order_bumps')
+      .insert({ product_id: productId, orderbump_id: bumpId });
+
+    if (error) {
+      console.error('Erro ao adicionar bump:', error);
+      return res.status(500).json({ erro: 'Erro ao adicionar bump' });
+    }
+
+    return res.status(200).json({ mensagem: 'Order bump adicionado com sucesso!' });
+  } catch (err) {
+    console.error('Erro inesperado:', err);
+    return res.status(500).json({ erro: 'Erro interno no servidor' });
+  }
+});
+
+
+
+
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
