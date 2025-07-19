@@ -980,32 +980,32 @@ app.put('/api/produtos/:id', async (req, res) => {
   }
 });
 
-app.post('/api/orderbumps', async (req, res) => {
-  const { product_id, orderbump_ids } = req.body;
 
-  if (!product_id || !Array.isArray(orderbump_ids)) {
-    return res.status(400).json({ erro: 'Campos obrigatórios ausentes' });
+app.post('/api/orderbumps', async (req, res) => {
+  const { product_id, bump_id } = req.body;
+  const apiKey = req.headers['x-api-key'];
+
+  if (!product_id || !bump_id || !apiKey) {
+    return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
   }
 
   try {
-    const inserts = orderbump_ids.map((id) => ({
-      product_id,
-      orderbump_id: id,
-    }));
-
-    const { error } = await supabase.from('orderbumps').insert(inserts);
+    const { error } = await supabase
+      .from('orderbumps')
+      .insert([{ product_id, bump_id, api_key: apiKey }]);
 
     if (error) {
-      console.error('Erro ao salvar order bumps:', error);
-      return res.status(500).json({ erro: 'Erro ao salvar order bumps' });
+      console.error('Erro ao inserir order bump:', error);
+      return res.status(500).json({ error: 'Erro ao inserir order bump' });
     }
 
-    return res.status(201).json({ mensagem: 'Order bumps adicionados com sucesso' });
+    return res.status(200).json({ message: 'Order bump criado com sucesso!' });
   } catch (err) {
     console.error('Erro inesperado:', err);
-    return res.status(500).json({ erro: 'Erro interno no servidor' });
+    return res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
+
 
 
 
