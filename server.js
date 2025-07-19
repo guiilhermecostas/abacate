@@ -920,12 +920,13 @@ app.get('/api/produtos/detalhe', async (req, res) => {
 
 app.put('/api/produtos/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id); // converte para número
-    if (isNaN(id) || id <= 0) {
-      return res.status(400).json({ error: 'ID do produto inválido.' });
+    const { id } = req.params;
+    const apiKey = req.headers['x-api-key'];
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'ID do produto é inválido ou ausente.' });
     }
 
-    const apiKey = req.headers['x-api-key'];
     if (!apiKey) {
       return res.status(401).json({ error: 'API Key é obrigatória.' });
     }
@@ -935,10 +936,16 @@ app.put('/api/produtos/:id', async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Campo name é obrigatório' });
     if (!details) return res.status(400).json({ error: 'Campo details é obrigatório' });
     if (!type) return res.status(400).json({ error: 'Campo type é obrigatório' });
-    if (offer === undefined || isNaN(Number(offer))) return res.status(400).json({ error: 'Campo offer inválido' });
+    if (offer === undefined || isNaN(Number(offer))) {
+      return res.status(400).json({ error: 'Campo offer inválido' });
+    }
     if (!status) return res.status(400).json({ error: 'Campo status é obrigatório' });
 
-    // Verifica se o produto existe e pertence a essa apiKey
+    console.log('🔍 Atualizando produto ID:', id);
+    console.log('🔐 API Key:', apiKey);
+    console.log('📦 Payload recebido:', { name, details, type, offer, status });
+
+    // Verifica se o produto existe e pertence à API key
     const { data: produtoExistente, error: fetchError } = await supabase
       .from('products')
       .select('id')
@@ -957,13 +964,15 @@ app.put('/api/produtos/:id', async (req, res) => {
       .eq('api_key', apiKey);
 
     if (updateError) {
-      console.error('Erro ao atualizar produto:', updateError.message);
+      console.error('❌ Erro ao atualizar produto:', updateError.message);
       return res.status(500).json({ error: 'Erro ao atualizar produto.' });
     }
 
+    console.log('✅ Produto atualizado com sucesso!');
     return res.status(200).json({ message: 'Produto atualizado com sucesso.' });
+
   } catch (err) {
-    console.error('Erro inesperado:', err);
+    console.error('🔥 Erro inesperado:', err);
     return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
