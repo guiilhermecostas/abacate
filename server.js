@@ -891,7 +891,7 @@ app.get('/api/produtos/detalhe', async (req, res) => {
   try {
     const { data: produtos, error } = await supabase
       .from('products')
-      .select('name, image, created_at, status')
+      .select('name, image, created_at, status, id')
       .eq('api_key', apiKey)
       .order('created_at', { ascending: false });
 
@@ -905,6 +905,7 @@ app.get('/api/produtos/detalhe', async (req, res) => {
     }
 
     const produtosFormatados = produtos.map((produto) => ({
+      id: produto.id,
       nome: produto.name,
       imagem: `https://wxufhqbbfzeqredinyjd.supabase.co/storage/v1/object/public/productsimage/${produto.image}`,
       dataCriacao: new Date(produto.created_at).toLocaleDateString('pt-BR'),
