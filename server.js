@@ -991,7 +991,7 @@ app.post('/api/orderbumps', async (req, res) => {
 
   // Validação da API Key (exemplo)
   const { data: user, error: errorUser } = await supabase
-    .from('users')
+    .from('usuarios')
     .select('*')
     .eq('api_key', apiKey)
     .single();
