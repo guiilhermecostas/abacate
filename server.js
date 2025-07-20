@@ -1072,6 +1072,40 @@ app.delete('/api/orderbumps/:id', async (req, res) => {
   }
 });
 
+app.get('/api/produtos/:id/bumps', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data: orderBumps, error: orderBumpsError } = await supabase
+      .from('orderbumps')
+      .select('bump_id')
+      .eq('product_id', Number(id));
+
+    if (orderBumpsError) {
+      return res.status(500).json({ error: 'Erro ao buscar orderbumps', details: orderBumpsError });
+    }
+
+    const bumpIds = orderBumps.map((item) => item.bump_id);
+
+    if (bumpIds.length === 0) {
+      return res.status(200).json({ bumps: [] }); 
+    }
+
+    const { data: bumps, error: bumpsError } = await supabase
+      .from('products')
+      .select('id, name, image, offer')
+      .in('id', bumpIds);
+
+    if (bumpsError) {
+      return res.status(500).json({ error: 'Erro ao buscar bumps', details: bumpsError });
+    }
+
+    res.json({ bumps });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno no servidor', details: err });
+  }
+});
+
 
 
 
