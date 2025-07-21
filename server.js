@@ -1106,11 +1106,26 @@ app.get('/api/produtos/:id/bumps', async (req, res) => {
   }
 });
 
+app.delete('/api/produtos/:productId/bumps/:bumpId', async (req, res) => {
+  const { productId, bumpId } = req.params;
 
+  try {
+      const { error } = await supabase
+          .from('orderbumps')
+          .delete()
+          .match({ product_id: Number(productId), bump_id: Number(bumpId) });
 
+      if (error) {
+          console.error('Erro ao deletar bump:', error);
+          return res.status(500).json({ error: 'Erro ao deletar bump' });
+      }
 
-
-
+      return res.status(200).json({ message: 'Bump deletado com sucesso' });
+  } catch (err) {
+      console.error('Erro inesperado:', err);
+      return res.status(500).json({ error: 'Erro inesperado ao deletar bump' });
+  }
+});
 
 
 
