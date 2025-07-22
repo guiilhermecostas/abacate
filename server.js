@@ -17,7 +17,7 @@ const ABACATEPAY_TOKEN = process.env.ABACATEPAY_TOKEN;
 const UTMIFY_TOKEN = process.env.UTMIFY_API_KEY;
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET; 
 
 if (!JWT_SECRET) {
   console.error('⚠️ JWT_SECRET não está definido no .env');
@@ -194,13 +194,25 @@ function authMiddleware(req, res, next) {
 }
 
 app.post('/create-pix', async (req, res) => {
-  const { amount, description, customer, tracking, fbp, fbc, user_agent } = req.body;
+  const {
+    amount,
+    description,
+    customer,
+    tracking,
+    fbp,
+    fbc,
+    user_agent,
+    webhook_url,
+    redirect_url
+  } = req.body;
 
-  if (!amount || amount < 2000 || amount > 200000)
-    return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$700,00)' });
+  if (!amount || amount < 2000 || amount > 200000) {
+    return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$2.000,00)' });
+  }
 
-  if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId)
+  if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId) {
     return res.status(400).json({ error: 'Dados do cliente incompletos' });
+  }
 
   const sanitizedCustomer = {
     ...customer,
@@ -209,25 +221,40 @@ app.post('/create-pix', async (req, res) => {
   };
 
   try {
-    const response = await axios.post('https://api.abacatepay.com/v1/pixQrCode/create', {
-      amount,
-      description: description || 'Este pagamento tem o selo de segurança do Banco Central do Brasil.',
-      customer: sanitizedCustomer,
-      expiresIn: 3600
-    }, {
-      headers: {
-        Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
-        'Content-Type': 'application/json'
+    const response = await axios.post(
+      'https://app.bravive.com/api/v1/payments',
+      {
+        amount,
+        currency: 'BRL',
+        description: description || 'Pagamento via PIX',
+        payer_name: sanitizedCustomer.name,
+        payer_email: sanitizedCustomer.email,
+        payer_phone: sanitizedCustomer.cellphone,
+        payer_document: sanitizedCustomer.taxId,
+        webhook_url: webhook_url || 'https://seudominio.com/webhook',
+        method: 'PIX',
+        addr_street: 'Rua Exemplo',
+        addr_number: '123',
+        addr_neighborhood: 'Centro',
+        addr_city: 'São Paulo',
+        addr_state: 'SP',
+        addr_zip: '01000-000',
+        addr_country: 'BR',
+        redirect_url: redirect_url || 'https://seudominio.com/obrigado'
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.BRAVIVE_TOKEN}`, // mantenha o token fora do código
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
 
-    const pixData = response.data?.data;
-    if (!pixData || !pixData.id) throw new Error('Pix não retornou ID');
+    const data = response.data;
 
     const apiKey = req.headers['x-api-key'];
-
     const dadosEvento = {
-      txid: pixData.id,
+      txid: data?.id,
       amount,
       customer: sanitizedCustomer,
       tracking: tracking || {},
@@ -237,22 +264,15 @@ app.post('/create-pix', async (req, res) => {
       api_key: apiKey
     };
 
-
-    await enviarEventoUtmify(dadosEvento, "waiting_payment");
-    await enviarEventoFacebook(dadosEvento, "InitiateCheckout");
+    await enviarEventoUtmify(dadosEvento, 'waiting_payment');
+    await enviarEventoFacebook(dadosEvento, 'InitiateCheckout');
     await enviarPushcut();
-    await salvarVendaNoSupabase(dadosEvento, "waiting_payment");
+    await salvarVendaNoSupabase(dadosEvento, 'waiting_payment');
 
-    return res.json({
-      data: {
-        txid: pixData.id,
-        brCode: pixData.brCode,
-        qrCodeBase64: pixData.brCodeBase64
-      }
-    });
+    return res.json({ data });
   } catch (error) {
-    console.error('❌ Erro ao gerar Pix:', error.response?.data || error.message);
-    return res.status(500).json({ error: 'Erro ao gerar PIX' });
+    console.error('❌ Erro ao criar pagamento Bravive:', error.response?.data || error.message);
+    return res.status(500).json({ error: 'Erro ao criar pagamento' });
   }
 });
 
