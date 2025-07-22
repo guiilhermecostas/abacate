@@ -1141,7 +1141,7 @@ app.patch('/api/produtos/:id/cor', async (req, res) => {
     return res.status(400).json({ error: 'Cor inválida' });
   }
 
-  // Verifica se o produto pertence a essa API Key
+  // Verifica se o produto existe e pertence à API Key do usuário
   const { data: produto, error: fetchError } = await supabase
     .from('products')
     .select('id')
@@ -1153,14 +1153,15 @@ app.patch('/api/produtos/:id/cor', async (req, res) => {
     return res.status(404).json({ error: 'Produto não encontrado ou não autorizado.' });
   }
 
-  const { error } = await supabase
+  // Atualiza a cor
+  const { error: updateError } = await supabase
     .from('products')
     .update({ color_checkout })
     .eq('id', id)
     .eq('api_key', apiKey);
 
-  if (error) {
-    console.error(error);
+  if (updateError) {
+    console.error(updateError);
     return res.status(500).json({ error: 'Erro ao atualizar cor do checkout' });
   }
 
