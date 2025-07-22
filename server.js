@@ -865,6 +865,7 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
         image: imagePath,
         api_key: apiKey,
         status: 'Aprovado',
+        checkout: 'donate',
       },
     ]);
 
@@ -1126,6 +1127,24 @@ app.delete('/api/produtos/:productId/bumps/:bumpId', async (req, res) => {
       return res.status(500).json({ error: 'Erro inesperado ao deletar bump' });
   }
 });
+
+app.patch('/api/produtos/:id/cor', async (req, res) => {
+  const { id } = req.params;
+  const { color_checkout } = req.body;
+  const apiKey = req.headers['x-api-key'];
+
+  const { error } = await supabase
+    .from('products')
+    .update({ color_checkout })
+    .eq('id', id);
+
+  if (error) {
+    return res.status(500).send('Erro ao atualizar cor do checkout');
+  }
+
+  res.status(200).send('Cor atualizada com sucesso');
+});
+
 
 
 
