@@ -1133,16 +1133,25 @@ app.patch('/api/produtos/:id/cor', async (req, res) => {
   const { color_checkout } = req.body;
   const apiKey = req.headers['x-api-key'];
 
+  if (!apiKey || apiKey !== process.env.API_KEY) {
+    return res.status(401).json({ error: 'API Key inválida' });
+  }
+
+  if (!color_checkout || typeof color_checkout !== 'string') {
+    return res.status(400).json({ error: 'Cor inválida' });
+  }
+
   const { error } = await supabase
     .from('products')
-    .update({ color_checkout })
+    .update({ color_checkout }) 
     .eq('id', id);
 
   if (error) {
-    return res.status(500).send('Erro ao atualizar cor do checkout');
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao atualizar cor do checkout' });
   }
 
-  res.status(200).send('Cor atualizada com sucesso');
+  res.status(200).json({ message: 'Cor atualizada com sucesso' });
 });
 
 
