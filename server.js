@@ -1133,18 +1133,31 @@ app.patch('/api/produtos/:id/cor', async (req, res) => {
   const { color_checkout } = req.body;
   const apiKey = req.headers['x-api-key'];
 
-  if (!apiKey || apiKey !== process.env.API_KEY) {
-    return res.status(401).json({ error: 'API Key inválida' });
+  if (!apiKey) {
+    return res.status(401).json({ error: 'API Key não fornecida' });
   }
 
   if (!color_checkout || typeof color_checkout !== 'string') {
     return res.status(400).json({ error: 'Cor inválida' });
   }
 
+  // Verifica se o produto pertence a essa API Key
+  const { data: produto, error: fetchError } = await supabase
+    .from('products')
+    .select('id')
+    .eq('id', id)
+    .eq('api_key', apiKey)
+    .single();
+
+  if (fetchError || !produto) {
+    return res.status(404).json({ error: 'Produto não encontrado ou não autorizado.' });
+  }
+
   const { error } = await supabase
     .from('products')
-    .update({ color_checkout }) 
-    .eq('id', id);
+    .update({ color_checkout })
+    .eq('id', id)
+    .eq('api_key', apiKey);
 
   if (error) {
     console.error(error);
@@ -1153,6 +1166,7 @@ app.patch('/api/produtos/:id/cor', async (req, res) => {
 
   res.status(200).json({ message: 'Cor atualizada com sucesso' });
 });
+
 
 
 
