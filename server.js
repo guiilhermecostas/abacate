@@ -380,7 +380,7 @@ app.post('/api/cadastro', async (req, res) => {
     email,
     senha,
     cpf,
-    api_key: 'overpay_key_' + Math.random().toString(36).substring(2, 15),
+    api_key: 'sealpay_apikey_' + Math.random().toString(36).substring(2, 15),
     pin_key_int: Math.floor(1000 + Math.random() * 9000),
     fixtax: 1.99,
     percenttax: 5.9,
@@ -1187,6 +1187,28 @@ app.patch('/api/produtos/:id/cor', async (req, res) => {
 
   res.status(200).json({ message: 'Cor atualizada com sucesso' });
 });
+
+app.get('/api/produto/:slug', async (req, res) => {
+  const { slug } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, details, type, offer, image, color_checkout, checkout, api_key')
+      .eq('slug', slug)
+      .single(); // espera apenas um produto
+
+    if (error || !data) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 
 
 
