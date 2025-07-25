@@ -1212,20 +1212,24 @@ app.get('/api/produto/:slug', async (req, res) => {
 app.get('/api/orderbumps/:id', async (req, res) => {
   const { id } = req.params;
 
-  const { data, error } = await supabase
-    .from('orderbumps')
-    .select('bump_id')
-    .eq('product_id', id);
+  try {
+    const { data, error } = await supabase
+      .from('orderbumps')
+      .select('bump_id') // só pega o ID
+      .eq('product_id', id);
 
-  if (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('Erro ao buscar orderbumps:', error);
+      return res.status(500).json({ error: 'Erro ao buscar orderbumps' });
+    }
+
+    const bumpIds = data.map(item => item.bump_id);
+    res.json(bumpIds);
+  } catch (err) {
+    console.error('Erro interno no servidor:', err);
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
-
-  const bumpIds = data.map(item => item.bump_id);
-  res.json(bumpIds);
 });
-
 
 app.get('/api/produtos/:bumpId', async (req, res) => {
   const bumpId = req.params.bumpId;
