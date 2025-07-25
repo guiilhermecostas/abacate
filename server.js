@@ -1228,6 +1228,26 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
   }
 });
 
+app.get("/api/produtos/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data: produto, error } = await supabase
+      .from("products")
+      .select("id, name, image, offer")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+
+    res.json(produto);
+  } catch (err) {
+    console.error("Erro ao buscar produto:", err.message);
+    res.status(500).json({ error: "Erro ao buscar produto" });
+  }
+});
+
+
 
 
 
