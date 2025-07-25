@@ -1209,41 +1209,25 @@ app.get('/api/produto/:slug', async (req, res) => {
   }
 });
 
-
 app.get("/api/orderbumps/:productId", async (req, res) => {
   const { productId } = req.params;
 
   try {
-    const { data: orderBumps, error: errorOrderBumps } = await supabase
+    const { data, error } = await supabase
       .from("orderbumps")
       .select("bump_id")
       .eq("product_id", productId);
 
-    if (errorOrderBumps) throw errorOrderBumps;
+    if (error) throw error;
 
-    if (!orderBumps || orderBumps.length === 0) {
-      return res.json([]);
-    }
-
-    const bumpIds = orderBumps.map((b) => b.bump_id);
-
-    if (bumpIds.length === 0) {
-      return res.json([]);
-    }
-
-    const { data: bumpsData, error: errorBumpsData } = await supabase
-      .from("products")
-      .select("id, name, image, offer")
-      .in("id", bumpIds);
-
-    if (errorBumpsData) throw errorBumpsData;
-
-    res.json(bumpsData || []);
+    const bumpIds = data.map((b) => b.bump_id);
+    res.json({ bumpIds });
   } catch (err) {
-    console.error("Erro ao buscar orderbumps:", err);
-    res.status(500).json({ error: "Erro ao buscar order bumps", details: err.message });
+    console.error("Erro ao buscar bump_ids:", err.message);
+    res.status(500).json({ error: "Erro ao buscar bump_ids" });
   }
 });
+
 
 
 
