@@ -1218,7 +1218,7 @@ app.get('/api/orderbumps/:productId', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('vw_orderbumps_simple') // Consultando a view agora
+      .from('vw_orderbumps_simple')  // Usando a view
       .select('bump_id')
       .eq('product_id', productId);
 
@@ -1227,13 +1227,11 @@ app.get('/api/orderbumps/:productId', async (req, res) => {
     }
 
     const bumpIds = data.map(item => item.bump_id);
-
     return res.json({ bumpIds });
   } catch (err) {
     return res.status(500).json({ error: 'Erro interno' });
   }
 });
-
 
 app.get('/api/produtos/:bumpId', async (req, res) => {
   const bumpId = req.params.bumpId;
