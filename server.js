@@ -1220,13 +1220,13 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
 
     if (error) throw error;
 
-    const bumpIds = data.map((b) => b.bump_id);
-    res.json({ bumpIds });
+    res.json(data);
   } catch (err) {
-    console.error("Erro ao buscar bump_ids:", err.message);
-    res.status(500).json({ error: "Erro ao buscar bump_ids" });
+    console.error("Erro ao buscar order bumps:", err.message);
+    res.status(500).json({ error: "Erro ao buscar order bumps" });
   }
 });
+
 
 app.get("/api/produtos/:id", async (req, res) => {
   const { id } = req.params;
