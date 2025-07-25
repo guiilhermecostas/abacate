@@ -1214,7 +1214,6 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
   const { productId } = req.params;
 
   try {
-    // Buscar bump_ids relacionados ao produto
     const { data: orderBumps, error: errorOrderBumps } = await supabase
       .from("orderbumps")
       .select("bump_id")
@@ -1223,13 +1222,15 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
     if (errorOrderBumps) throw errorOrderBumps;
 
     if (!orderBumps || orderBumps.length === 0) {
-      // Sem bumps relacionados - retorne lista vazia
       return res.json([]);
     }
 
     const bumpIds = orderBumps.map((b) => b.bump_id);
 
-    // Buscar os produtos (bumps)
+    if (bumpIds.length === 0) {
+      return res.json([]);
+    }
+
     const { data: bumpsData, error: errorBumpsData } = await supabase
       .from("products")
       .select("id, name, image, offer")
@@ -1243,7 +1244,6 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar order bumps", details: err.message });
   }
 });
-
 
 
 
