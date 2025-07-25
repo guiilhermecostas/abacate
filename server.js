@@ -1209,7 +1209,6 @@ app.get('/api/produto/:slug', async (req, res) => {
   }
 });
 
-// server.js (ou onde estão suas rotas)
 
 app.get("/api/orderbumps/:productId", async (req, res) => {
   const { productId } = req.params;
@@ -1222,6 +1221,12 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
       .eq("product_id", productId);
 
     if (errorOrderBumps) throw errorOrderBumps;
+
+    if (!orderBumps || orderBumps.length === 0) {
+      // Sem bumps relacionados - retorne lista vazia
+      return res.json([]);
+    }
+
     const bumpIds = orderBumps.map((b) => b.bump_id);
 
     // Buscar os produtos (bumps)
@@ -1232,13 +1237,12 @@ app.get("/api/orderbumps/:productId", async (req, res) => {
 
     if (errorBumpsData) throw errorBumpsData;
 
-    res.json(bumpsData);
+    res.json(bumpsData || []);
   } catch (err) {
-    console.error("Erro ao buscar orderbumps:", err.message);
-    res.status(500).json({ error: "Erro ao buscar order bumps" });
+    console.error("Erro ao buscar orderbumps:", err);
+    res.status(500).json({ error: "Erro ao buscar order bumps", details: err.message });
   }
 });
-
 
 
 
