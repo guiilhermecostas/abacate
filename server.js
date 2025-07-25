@@ -1226,13 +1226,12 @@ app.get('/api/orderbumps/:productId', async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    const bumpIds = data.map(item => item.bump_id);
-
-    return res.json({ bumpIds });
+    return res.json({ bumpIds: data.map(item => item.bump_id) });
   } catch (err) {
     return res.status(500).json({ error: 'Erro interno' });
   }
 });
+
 
 app.get('/api/produtos/:bumpId', async (req, res) => {
   const bumpId = req.params.bumpId;
