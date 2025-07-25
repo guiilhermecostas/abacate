@@ -1217,6 +1217,7 @@ app.get('/api/orderbumps/:productId', async (req, res) => {
   }
 
   try {
+    // Select simples, sem parâmetros extras
     const { data, error } = await supabase
       .from('orderbumps')
       .select('bump_id')
@@ -1231,6 +1232,7 @@ app.get('/api/orderbumps/:productId', async (req, res) => {
     return res.status(500).json({ error: 'Erro interno' });
   }
 });
+
 
 
 app.get('/api/produtos/:bumpId', async (req, res) => {
