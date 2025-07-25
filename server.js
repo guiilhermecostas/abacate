@@ -1209,29 +1209,23 @@ app.get('/api/produto/:slug', async (req, res) => {
   }
 });
 
-app.get('/api/orderbumps/:productId', async (req, res) => {
-  const productId = req.params.productId;
+app.get('/api/orderbumps/:id', async (req, res) => {
+  const { id } = req.params;
 
-  if (!productId) {
-    return res.status(400).json({ error: 'productId obrigatório' });
+  const { data, error } = await supabase
+    .from('orderbumps')
+    .select('bump_id') // ✅ seleciona apenas o campo necessário
+    .eq('product_id', id); // 🔍 busca os orderbumps desse produto
+
+  if (error) {
+    console.error('Erro ao buscar orderbumps:', error);
+    return res.status(500).json({ error: 'Erro ao buscar orderbumps' });
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('vw_orderbumps_simple')  // Usando a view
-      .select('bump_id')
-      .eq('product_id', productId);
+  const bumpIds = data.map(item => item.bump_id);
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    const bumpIds = data.map(item => item.bump_id);
-    return res.json({ bumpIds });
-  } catch (err) {
-    return res.status(500).json({ error: 'Erro interno' });
-  }
-});
+  res.json(bumpIds);
+}); 
 
 app.get('/api/produtos/:bumpId', async (req, res) => {
   const bumpId = req.params.bumpId;
