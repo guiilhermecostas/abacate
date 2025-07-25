@@ -1209,49 +1209,60 @@ app.get('/api/produto/:slug', async (req, res) => {
   }
 });
 
-app.get("/api/orderbumps/:productId", async (req, res) => {
-  const { productId } = req.params;
+app.get('/api/orderbumps/:productId', async (req, res) => {
+  const productId = req.params.productId;
+
+  if (!productId) {
+    return res.status(400).json({ error: 'productId obrigatório' });
+  }
 
   try {
     const { data, error } = await supabase
-      .from("orderbumps")
-      .select("bump_id")
-      .eq("product_id", productId);
+      .from('orderbumps')
+      .select('bump_id')
+      .eq('product_id', productId);
 
-    if (error) throw error;
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data);
+    const bumpIds = data.map(item => item.bump_id);
+
+    return res.json({ bumpIds });
   } catch (err) {
-    console.error("Erro ao buscar order bumps:", err.message);
-    res.status(500).json({ error: "Erro ao buscar order bumps" });
+    return res.status(500).json({ error: 'Erro interno' });
   }
 });
 
+app.get('/api/produtos/:bumpId', async (req, res) => {
+  const bumpId = req.params.bumpId;
 
-app.get("/api/produtos/:id", async (req, res) => {
-  const { id } = req.params;
+  if (!bumpId) {
+    return res.status(400).json({ error: 'bumpId é obrigatório' });
+  }
 
   try {
-    const { data: produto, error } = await supabase
-      .from("products")
-      .select("id, name, image, offer")
-      .eq("id", id)
-      .single();
+    const { data, error } = await supabase
+      .from('products')
+      .select('name, offer')
+      .eq('id', bumpId)
+      .single(); // espera 1 resultado só
 
-    if (error) throw error;
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(produto);
+    if (!data) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+
+    return res.json(data);
   } catch (err) {
-    console.error("Erro ao buscar produto:", err.message);
-    res.status(500).json({ error: "Erro ao buscar produto" });
+    return res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
-
-
-
-
-
 
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
+ 
