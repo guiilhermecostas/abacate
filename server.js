@@ -1209,38 +1209,38 @@ app.get('/api/produto/:slug', async (req, res) => {
   }
 });
 
-router.get('/api/bumps/:productId', async (req, res) => {
+app.get('/api/orderbumps/:productId', async (req, res) => {
   const { productId } = req.params;
 
   try {
-    // 1. Buscar todos os bump_ids do produto
-    const { data: orderBumps, error: errorOrderBumps } = await supabase
+    // 1. Busca os bumps relacionados a esse produto
+    const { data: bumpsRelacionados, error: error1 } = await supabase
       .from('orderbumps')
       .select('bump_id')
       .eq('product_id', productId);
 
-    if (errorOrderBumps) throw errorOrderBumps;
-
-    if (!orderBumps || orderBumps.length === 0) {
-      return res.json({ bumps: [] });
+    if (error1) throw error1;
+    if (!bumpsRelacionados || bumpsRelacionados.length === 0) {
+      return res.json([]);
     }
 
-    const bumpIds = orderBumps.map((row) => row.bump_id);
+    const bumpIds = bumpsRelacionados.map(b => b.bump_id);
 
-    // 2. Buscar dados dos produtos relacionados (bumps)
-    const { data: bumps, error: errorBumps } = await supabase
+    // 2. Busca os produtos relacionados a esses bumps
+    const { data: produtosBumps, error: error2 } = await supabase
       .from('products')
       .select('id, name, image, offer')
       .in('id', bumpIds);
 
-    if (errorBumps) throw errorBumps;
+    if (error2) throw error2;
 
-    return res.json({ bumps });
-  } catch (err) {
-    console.error('Erro ao buscar bumps:', err);
-    res.status(500).json({ error: 'Erro interno ao buscar order bumps.' });
+    res.json(produtosBumps);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao buscar orderbumps' });
   }
 });
+
 
 
 
