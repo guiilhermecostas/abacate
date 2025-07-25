@@ -1214,18 +1214,18 @@ app.get('/api/orderbumps/:id', async (req, res) => {
 
   const { data, error } = await supabase
     .from('orderbumps')
-    .select('bump_id') // ✅ seleciona apenas o campo necessário
-    .eq('product_id', id); // 🔍 busca os orderbumps desse produto
+    .select('bump_id')
+    .eq('product_id', id);
 
   if (error) {
-    console.error('Erro ao buscar orderbumps:', error);
-    return res.status(500).json({ error: 'Erro ao buscar orderbumps' });
+    console.error(error);
+    return res.status(500).json({ error: error.message });
   }
 
   const bumpIds = data.map(item => item.bump_id);
-
   res.json(bumpIds);
-}); 
+});
+
 
 app.get('/api/produtos/:bumpId', async (req, res) => {
   const bumpId = req.params.bumpId;
