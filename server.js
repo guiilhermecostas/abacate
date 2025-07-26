@@ -206,14 +206,11 @@ app.post('/create-pix', async (req, res) => {
     redirect_url
   } = req.body;
 
-  if (!amount || amount < 2000 || amount > 200000) {
-    return res.status(400).json({ error: 'Valor fora do permitido (mín. R$20,00, máx. R$2.000,00)' });
-  }
-
   if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId) {
     return res.status(400).json({ error: 'Dados do cliente incompletos' });
   }
 
+  // Sanitiza telefone e documento
   const sanitizedCustomer = {
     ...customer,
     cellphone: sanitizeNumber(customer.cellphone),
@@ -221,6 +218,18 @@ app.post('/create-pix', async (req, res) => {
   };
 
   try {
+    // Log dos dados enviados para depuração
+    console.log('Criando pagamento com:', {
+      amount,
+      description,
+      payer_name: sanitizedCustomer.name,
+      payer_email: sanitizedCustomer.email,
+      payer_phone: sanitizedCustomer.cellphone,
+      payer_document: sanitizedCustomer.taxId,
+      webhook_url,
+      redirect_url,
+    });
+
     const response = await axios.post(
       'https://app.bravive.com/api/v1/payments',
       {
@@ -244,7 +253,7 @@ app.post('/create-pix', async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.BRAVIVE_TOKEN}`, // mantenha o token fora do código
+          Authorization: `Bearer ${process.env.BRAVIVE_TOKEN}`,
           'Content-Type': 'application/json'
         }
       }
@@ -252,11 +261,9 @@ app.post('/create-pix', async (req, res) => {
 
     const data = response.data;
 
-
-
     const apiKey = req.headers['x-api-key'];
     const dadosEvento = {
-      txid: data?.id,
+      txid: data.id,
       amount,
       customer: sanitizedCustomer,
       tracking: tracking || {},
@@ -266,6 +273,7 @@ app.post('/create-pix', async (req, res) => {
       api_key: apiKey
     };
 
+    // Chama as funções de eventos e armazenamento (assumindo que estão definidas)
     await enviarEventoUtmify(dadosEvento, 'waiting_payment');
     await enviarEventoFacebook(dadosEvento, 'InitiateCheckout');
     await enviarPushcut();
@@ -274,26 +282,22 @@ app.post('/create-pix', async (req, res) => {
     return res.json({
       id: data.id,
       status: data.status,
-      pixQrCode: data.pix_qr_code,  // chave do QR code (base64 ou url)
-      pixCode: data.pix_code,       // código Pix em texto
+      pixQrCode: data.pix_qr_code,
+      pixCode: data.pix_code,
       createdAt: data.created_at,
     });
 
   } catch (error) {
     if (error.response) {
-      // API respondeu com erro (400, 401, 500...)
       console.error('❌ Erro Bravive status:', error.response.status);
       console.error('❌ Erro Bravive data:', JSON.stringify(error.response.data, null, 2));
     } else if (error.request) {
-      // Requisição enviada mas sem resposta da API
       console.error('❌ Erro Bravive: sem resposta da API', error.request);
     } else {
-      // Erro no setup da requisição
       console.error('❌ Erro na requisição:', error.message);
     }
     return res.status(500).json({ error: 'Erro ao criar pagamento' });
   }
-
 });
 
 
