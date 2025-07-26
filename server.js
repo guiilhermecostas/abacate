@@ -143,7 +143,28 @@ async function enviarPushcut() {
 
 async function salvarVendaNoSupabase(data, status) {
   const utm = data.tracking?.utm || {};
+  const apiKey = data.api_key || '';
 
+  // 🔍 Buscar taxas do usuário com base na API Key
+  const { data: user, error: userError } = await supabase
+    .from('usuarios')
+    .select('fixtax, percenttax')
+    .eq('api_key', apiKey)
+    .single();
+
+  if (userError || !user) {
+    console.error('❌ Erro ao buscar taxas do usuário:', userError?.message || 'Usuário não encontrado');
+    return;
+  }
+
+  const fixtax = parseFloat(user.fixtax) || 0;
+  const percenttax = parseFloat(user.percenttax) || 0;
+
+  const valorEmReais = data.amount / 100;
+  const valorLiquido = valorEmReais - fixtax - (valorEmReais * (percenttax / 100));
+  const valor_liquido = Math.round(valorLiquido * 100); // em centavos
+
+  // 🔁 Evita duplicação de txid
   const existing = await supabase.from('vendas').select('txid').eq('txid', data.txid).single();
   if (existing.data) {
     console.log('🟡 Venda já registrada. Ignorando.');
@@ -153,8 +174,9 @@ async function salvarVendaNoSupabase(data, status) {
   const { error } = await supabase.from('vendas').insert([{
     txid: data.txid,
     amount: data.amount,
+    valor_liquido,
     status: status,
-    api_key: data.api_key || '',
+    api_key: apiKey,
     name: data.customer?.name || '',
     email: data.customer?.email || '',
     cellphone: data.customer?.cellphone || '',
@@ -175,6 +197,7 @@ async function salvarVendaNoSupabase(data, status) {
     console.log("✅ Venda salva no Supabase com sucesso.");
   }
 }
+
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
