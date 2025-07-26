@@ -194,112 +194,52 @@ function authMiddleware(req, res, next) {
 }
 
 app.post('/create-pix', async (req, res) => {
-  const {
-    amount,
-    description,
-    customer,
-    tracking,
-    fbp,
-    fbc,
-    user_agent,
-    webhook_url,
-    redirect_url
-  } = req.body;
-
-  if (!customer || !customer.name || !customer.cellphone || !customer.email || !customer.taxId) {
-    return res.status(400).json({ error: 'Dados do cliente incompletos' });
-  }
-
-  // Sanitiza telefone e documento
-  const sanitizedCustomer = {
-    ...customer,
-    cellphone: sanitizeNumber(customer.cellphone),
-    taxId: sanitizeNumber(customer.taxId)
-  };
-
   try {
-    // Log dos dados enviados para depuração
-    console.log('Criando pagamento com:', {
-      amount,
-      description,
-      payer_name: sanitizedCustomer.name,
-      payer_email: sanitizedCustomer.email,
-      payer_phone: sanitizedCustomer.cellphone,
-      payer_document: sanitizedCustomer.taxId,
-      webhook_url,
-      redirect_url,
-    });
+    const { amount, description, customer, tracking } = req.body;
+
+    if (!amount || !customer?.name || !customer?.email) {
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+    }
 
     const response = await axios.post(
       'https://app.bravive.com/api/v1/payments',
       {
-        amount,
+        amount: amount, // deve estar em centavos
         currency: 'BRL',
-        description: description || 'Pagamento via PIX',
-        payer_name: sanitizedCustomer.name,
-        payer_email: sanitizedCustomer.email,
-        payer_phone: sanitizedCustomer.cellphone,
-        payer_document: sanitizedCustomer.taxId,
-        webhook_url: webhook_url || 'https://seudominio.com/webhook',
+        description: description || 'Doação via Pix',
+        payer_name: customer.name,
+        payer_email: customer.email,
+        payer_phone: customer.cellphone || '',
+        payer_document: customer.taxId || '',
         method: 'PIX',
-        addr_street: 'Rua Exemplo',
-        addr_number: '123',
-        addr_neighborhood: 'Centro',
-        addr_city: 'São Paulo',
-        addr_state: 'SP',
-        addr_zip: '01000-000',
-        addr_country: 'BR',
-        redirect_url: redirect_url || 'https://seudominio.com/obrigado'
+        webhook_url: 'https://seusite.com/webhook/pagamento', // opcional, pode trocar
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.BRAVIVE_TOKEN}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer VA_c64294a4ec6b068fd4ff5e26e95fd49f57472452e2b8d8db97b92e0a8811aab5`,
+          'Content-Type': 'application/json',
+        },
       }
-    );
+    ); 
 
-    const data = response.data;
+    const { pix_qr_code, pix_code } = response.data;
 
-    const apiKey = req.headers['x-api-key'];
-    const dadosEvento = {
-      txid: data.id,
-      amount,
-      customer: sanitizedCustomer,
-      tracking: tracking || {},
-      fbp,
-      fbc,
-      user_agent,
-      api_key: apiKey
-    };
-
-    // Chama as funções de eventos e armazenamento (assumindo que estão definidas)
-    await enviarEventoUtmify(dadosEvento, 'waiting_payment');
-    await enviarEventoFacebook(dadosEvento, 'InitiateCheckout');
-    await enviarPushcut();
-    await salvarVendaNoSupabase(dadosEvento, 'waiting_payment');
-
-    return res.json({
-      id: data.id,
-      status: data.status,
-      pixQrCode: data.pix_qr_code,
-      pixCode: data.pix_code,
-      createdAt: data.created_at,
-    });
-
-  } catch (error) {
-    if (error.response) {
-      console.error('❌ Erro Bravive status:', error.response.status);
-      console.error('❌ Erro Bravive data:', JSON.stringify(error.response.data, null, 2));
-    } else if (error.request) {
-      console.error('❌ Erro Bravive: sem resposta da API', error.request);
-    } else {
-      console.error('❌ Erro na requisição:', error.message);
+    if (!pix_qr_code || !pix_code) {
+      return res.status(500).json({ error: 'Erro ao gerar QR Code Pix' });
     }
-    return res.status(500).json({ error: 'Erro ao criar pagamento' });
+
+    res.json({
+      pix_qr_code,
+      pix_code,
+    });
+  } catch (err) {
+    console.error('Erro ao criar pagamento Bravive:', err.response?.data || err.message);
+    res.status(500).json({
+      error: 'Erro ao criar pagamento',
+      detalhes: err.response?.data || err.message,
+    });
   }
 });
-
 
 app.post('/webhook', async (req, res) => {
   const { txid, status } = req.body;
