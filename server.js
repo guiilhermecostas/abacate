@@ -838,6 +838,23 @@ app.post('/api/salvar-chave', async (req, res) => {
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+function gerarSlugAleatorio() {
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const numeros = '0123456789';
+
+  const letrasAleatorias = Array.from({ length: 5 }, () =>
+    letras.charAt(Math.floor(Math.random() * letras.length))
+  );
+
+  const numerosAleatorios = Array.from({ length: 5 }, () =>
+    numeros.charAt(Math.floor(Math.random() * numeros.length))
+  );
+
+  const combinado = [...letrasAleatorias, ...numerosAleatorios];
+
+  return combinado.sort(() => Math.random() - 0.5).join('');
+}
+
 
 app.post('/api/produtos', upload.single('image'), async (req, res) => {
   try {
@@ -878,14 +895,15 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
 
     const { error: insertError } = await supabase.from('products').insert([
       {
-        name,
+        name, 
         details,
-        type,
+        type, 
         offer: parsedOffer,
         image: imagePath,
         api_key: apiKey,
         status: 'Aprovado',
         checkout: 'donate',
+        slug: gerarSlugAleatorio(),
       },
     ]);
 
@@ -1208,6 +1226,10 @@ app.get('/api/produto/:slug', async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
+
+
+
+
 
 app.get('/api/orderbumps/:id', async (req, res) => {
   const { id } = req.params;
