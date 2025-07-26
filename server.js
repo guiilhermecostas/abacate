@@ -150,7 +150,7 @@ async function salvarVendaNoSupabase(data, status) {
     return;
   }
 
-  await supabase.from('vendas').insert([{
+  const { error } = await supabase.from('vendas').insert([{
     txid: data.txid,
     amount: data.amount,
     status: status,
@@ -168,7 +168,6 @@ async function salvarVendaNoSupabase(data, status) {
     fbc: data.fbc || '',
     user_agent: data.user_agent || ''
   }]);
-
 
   if (error) {
     console.error("❌ Erro ao salvar no Supabase:", error.message);
@@ -195,7 +194,7 @@ function authMiddleware(req, res, next) {
 
 app.post('/create-pix', async (req, res) => {
   try {
-    const { amount, description, customer, tracking } = req.body;
+    const { amount, description, customer, tracking, api_key, fbp, fbc, user_agent } = req.body;
 
     if (!amount || !customer?.name || !customer?.email) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
@@ -204,7 +203,7 @@ app.post('/create-pix', async (req, res) => {
     const response = await axios.post(
       'https://app.bravive.com/api/v1/payments',
       {
-        amount: amount, // deve estar em centavos
+        amount: amount,
         currency: 'BRL',
         description: description || 'Doação via Pix',
         payer_name: customer.name,
@@ -212,25 +211,41 @@ app.post('/create-pix', async (req, res) => {
         payer_phone: customer.cellphone || '',
         payer_document: customer.taxId || '',
         method: 'PIX',
-        webhook_url: 'https://seusite.com/webhook/pagamento', // opcional, pode trocar
+        webhook_url: 'https://seusite.com/webhook/pagamento',
       },
       {
         headers: {
-          Authorization: `Bearer VA_c64294a4ec6b068fd4ff5e26e95fd49f57472452e2b8d8db97b92e0a8811aab5`,
+          Authorization: `Bearer ${process.env.BRAVIVE_API_KEY}`, // ou direto sua chave
           'Content-Type': 'application/json',
         },
       }
-    ); 
+    );
 
-    const { pix_qr_code, pix_code } = response.data;
+    const { pix_qr_code, pix_code, id } = response.data;
 
-    if (!pix_qr_code || !pix_code) {
+    if (!pix_qr_code || !pix_code || !id) {
       return res.status(500).json({ error: 'Erro ao gerar QR Code Pix' });
     }
+
+    // 🟢 Salvar no Supabase com status inicial
+    const txid = id.toString();
+    const vendaData = {
+      txid,
+      amount,
+      customer,
+      tracking,
+      api_key,
+      fbp,
+      fbc,
+      user_agent
+    };
+
+    await salvarVendaNoSupabase(vendaData, 'waiting_payment');
 
     res.json({
       pix_qr_code,
       pix_code,
+      txid
     });
   } catch (err) {
     console.error('Erro ao criar pagamento Bravive:', err.response?.data || err.message);
