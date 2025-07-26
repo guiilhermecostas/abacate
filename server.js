@@ -17,7 +17,7 @@ const ABACATEPAY_TOKEN = process.env.ABACATEPAY_TOKEN;
 const UTMIFY_TOKEN = process.env.UTMIFY_API_KEY;
 const FB_PIXEL_ID = process.env.FB_PIXEL_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
-const JWT_SECRET = process.env.JWT_SECRET; 
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   console.error('⚠️ JWT_SECRET não está definido no .env');
@@ -252,7 +252,7 @@ app.post('/create-pix', async (req, res) => {
 
     const data = response.data;
 
-    
+
 
     const apiKey = req.headers['x-api-key'];
     const dadosEvento = {
@@ -278,46 +278,24 @@ app.post('/create-pix', async (req, res) => {
       pixCode: data.pix_code,       // código Pix em texto
       createdAt: data.created_at,
     });
-    
+
   } catch (error) {
-    console.error('❌ Erro ao criar pagamento Bravive:', error.response?.data || error.message);
+    if (error.response) {
+      // API respondeu com erro (400, 401, 500...)
+      console.error('❌ Erro Bravive status:', error.response.status);
+      console.error('❌ Erro Bravive data:', JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      // Requisição enviada mas sem resposta da API
+      console.error('❌ Erro Bravive: sem resposta da API', error.request);
+    } else {
+      // Erro no setup da requisição
+      console.error('❌ Erro na requisição:', error.message);
+    }
     return res.status(500).json({ error: 'Erro ao criar pagamento' });
   }
+
 });
 
-app.get('/check-status/:txid', async (req, res) => {
-  const { txid } = req.params;
-
-  try {
-    const response = await axios.get(`https://api.abacatepay.com/v1/pixQrCode/check?id=${txid}`, {
-      headers: {
-        Authorization: `Bearer ${ABACATEPAY_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const status = response.data?.data?.status;
-
-    if (status === 'PAID') {
-      const { data, error } = await supabase.from('vendas').select('*').eq('txid', txid).single();
-
-      if (!data || error) return res.status(404).json({ error: 'Venda não encontrada' });
-
-      await supabase.from('vendas').update({ status: 'paid' }).eq('txid', txid);
-
-      await enviarEventoFacebook(data, "Purchase");
-      await enviarEventoUtmify(data, "paid");
-
-      return res.json({ status: 'paid', message: 'Pagamento confirmado' });
-    }
-
-    return res.json({ status, message: 'Pagamento ainda não confirmado' });
-
-  } catch (err) {
-    console.error("❌ Erro ao checar status:", err.response?.data || err.message);
-    return res.status(500).json({ error: 'Erro ao verificar status do Pix' });
-  }
-});
 
 app.post('/webhook', async (req, res) => {
   const { txid, status } = req.body;
@@ -904,9 +882,9 @@ app.post('/api/produtos', upload.single('image'), async (req, res) => {
 
     const { error: insertError } = await supabase.from('products').insert([
       {
-        name, 
+        name,
         details,
-        type, 
+        type,
         offer: parsedOffer,
         image: imagePath,
         api_key: apiKey,
@@ -955,7 +933,7 @@ app.get('/api/produtos/detalhe', async (req, res) => {
     const produtosFormatados = produtos.map((produto) => ({
       id: produto.id,
       nome: produto.name,
-      details: produto.details,  
+      details: produto.details,
       offer: produto.offer,
       imagem: `https://wxufhqbbfzeqredinyjd.supabase.co/storage/v1/object/public/productsimage/${produto.image}`,
       dataCriacao: new Date(produto.created_at).toLocaleDateString('pt-BR'),
@@ -1136,7 +1114,7 @@ app.get('/api/produtos/:id/bumps', async (req, res) => {
     const bumpIds = orderBumps.map((item) => item.bump_id);
 
     if (bumpIds.length === 0) {
-      return res.status(200).json({ bumps: [] }); 
+      return res.status(200).json({ bumps: [] });
     }
 
     const { data: bumps, error: bumpsError } = await supabase
@@ -1158,20 +1136,20 @@ app.delete('/api/produtos/:productId/bumps/:bumpId', async (req, res) => {
   const { productId, bumpId } = req.params;
 
   try {
-      const { error } = await supabase
-          .from('orderbumps')
-          .delete()
-          .match({ product_id: Number(productId), bump_id: Number(bumpId) });
+    const { error } = await supabase
+      .from('orderbumps')
+      .delete()
+      .match({ product_id: Number(productId), bump_id: Number(bumpId) });
 
-      if (error) {
-          console.error('Erro ao deletar bump:', error);
-          return res.status(500).json({ error: 'Erro ao deletar bump' });
-      }
+    if (error) {
+      console.error('Erro ao deletar bump:', error);
+      return res.status(500).json({ error: 'Erro ao deletar bump' });
+    }
 
-      return res.status(200).json({ message: 'Bump deletado com sucesso' });
+    return res.status(200).json({ message: 'Bump deletado com sucesso' });
   } catch (err) {
-      console.error('Erro inesperado:', err);
-      return res.status(500).json({ error: 'Erro inesperado ao deletar bump' });
+    console.error('Erro inesperado:', err);
+    return res.status(500).json({ error: 'Erro inesperado ao deletar bump' });
   }
 });
 
@@ -1293,4 +1271,3 @@ app.get('/api/produtos/:bumpId', async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
- 
