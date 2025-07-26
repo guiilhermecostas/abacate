@@ -252,6 +252,8 @@ app.post('/create-pix', async (req, res) => {
 
     const data = response.data;
 
+    
+
     const apiKey = req.headers['x-api-key'];
     const dadosEvento = {
       txid: data?.id,
@@ -269,7 +271,14 @@ app.post('/create-pix', async (req, res) => {
     await enviarPushcut();
     await salvarVendaNoSupabase(dadosEvento, 'waiting_payment');
 
-    return res.json({ data });
+    return res.json({
+      id: data.id,
+      status: data.status,
+      pixQrCode: data.pix_qr_code,  // chave do QR code (base64 ou url)
+      pixCode: data.pix_code,       // código Pix em texto
+      createdAt: data.created_at,
+    });
+    
   } catch (error) {
     console.error('❌ Erro ao criar pagamento Bravive:', error.response?.data || error.message);
     return res.status(500).json({ error: 'Erro ao criar pagamento' });
